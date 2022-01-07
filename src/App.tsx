@@ -1,24 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
-import { HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS, POSE_LANDMARKS } from '@mediapipe/holistic';
+import { Holistic, POSE_CONNECTIONS } from '@mediapipe/holistic';
 import { Camera } from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks, lerp } from '@mediapipe/drawing_utils';
-import { Circle as CircleShape, Group, Layer, Stage, Text } from 'react-konva';
+import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import { Layer, Stage } from 'react-konva';
 import { Box, FormControl, InputLabel, MenuItem, Paper, Select, Toolbar } from '@mui/material';
 import Konva from 'konva';
-import { Circle, CircleGame, CircleRenderizationMetadata } from './game';
+import { Circle, CircleGame } from './game';
 import useSound from 'use-sound';
 import ActionsBar, { Action } from './ActionsBar';
 import Webcam from 'react-webcam';
 
+// Game Model
+const circleGame = new CircleGame()
+
+// Game Renderization Engine
+const defaultCircleTransformer: Konva.Transformer = new Konva.Transformer({
+  flipEnabled: false,
+  keepRatio: true,
+  rotateEnabled: false,
+  enabledAnchors: [
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right"
+  ]
+})
+
+// MediaPipe
 const holistic = new Holistic({
   locateFile: (file) => {
     return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
   }
 });
-
-const circleGame = new CircleGame()
-
 holistic.setOptions({
   modelComplexity: 1,
   smoothLandmarks: true,
@@ -30,6 +44,7 @@ holistic.setOptions({
   minTrackingConfidence: 0.5
 });
 
+// Interfaces
 interface State {
   showCameraVideo: boolean
   showPoseLandMarks: boolean
@@ -45,6 +60,7 @@ function App() {
   const gameCanvasRef = useRef(null)
   const gameLayerRef = useRef<Konva.Layer>(null)
 
+
   // General
   const [play] = useSound(`${process.env.PUBLIC_URL}/colision_2.wav`);
 
@@ -53,7 +69,7 @@ function App() {
     showPoseLandMarks: false
   })
 
-  const [deviceId, setDeviceId] = useState<string>("096d92b7a0b7991bfc3afed5113dbf6180967d661774fab62ada48dece9fe761");
+  const [deviceId, setDeviceId] = useState<string>("");
   const [devices, setDevices] = useState<Array<MediaDeviceInfo>>([]);
 
   holistic.onResults(onResults)
@@ -90,28 +106,28 @@ function App() {
         { color: '#00FF00', lineWidth: 3 }
       );
 
-      drawConnectors(
-        ctx, results.rightHandLandmarks, HAND_CONNECTIONS,
-        { color: 'white' });
-      drawLandmarks(ctx, results.rightHandLandmarks, {
-        color: 'white',
-        fillColor: 'rgb(0,217,231)',
-        lineWidth: 2,
-        radius: (data: any) => {
-          return lerp(data.from!.z!, -0.15, .1, 10, 1);
-        }
-      });
-      drawConnectors(
-        ctx, results.leftHandLandmarks, HAND_CONNECTIONS,
-        { color: 'white' });
-      drawLandmarks(ctx, results.leftHandLandmarks, {
-        color: 'white',
-        fillColor: 'rgb(255,138,0)',
-        lineWidth: 2,
-        radius: (data: any) => {
-          return lerp(data.from!.z!, -0.15, .1, 10, 1);
-        }
-      });
+      // drawConnectors(
+      //   ctx, results.rightHandLandmarks, HAND_CONNECTIONS,
+      //   { color: 'white' });
+      // drawLandmarks(ctx, results.rightHandLandmarks, {
+      //   color: 'white',
+      //   fillColor: 'rgb(0,217,231)',
+      //   lineWidth: 2,
+      //   radius: (data: any) => {
+      //     return lerp(data.from!.z!, -0.15, .1, 10, 1);
+      //   }
+      // });
+      // drawConnectors(
+      //   ctx, results.leftHandLandmarks, HAND_CONNECTIONS,
+      //   { color: 'white' });
+      // drawLandmarks(ctx, results.leftHandLandmarks, {
+      //   color: 'white',
+      //   fillColor: 'rgb(255,138,0)',
+      //   lineWidth: 2,
+      //   radius: (data: any) => {
+      //     return lerp(data.from!.z!, -0.15, .1, 10, 1);
+      //   }
+      // });
     }
     ctx.restore();
   }, [state])
@@ -131,10 +147,10 @@ function App() {
 
           const defaultPointRadius = 5
           const poseLandmarks = results.poseLandmarks || []
-          const rightHandLandmarks = results.rightHandLandmarks || []
-          const leftHandLandmarks = results.leftHandLandmarks || []
+          // const rightHandLandmarks = results.rightHandLandmarks || []
+          // const leftHandLandmarks = results.leftHandLandmarks || []
 
-          for (let posePoint of [...poseLandmarks, ...rightHandLandmarks, ...leftHandLandmarks]) {
+          for (let posePoint of [...poseLandmarks]) {
             const x = posePoint.x * window.innerWidth
             const y = posePoint.y * window.innerHeight
 
@@ -151,14 +167,15 @@ function App() {
 
   function onResults(results: any) {
     drawPoseLandmarks(results)
-    setTimeout(() => {
-      checkColisions(results)
-    })
-
+    checkColisions(results)
   }
 
-  function setup() {
-    // Input camera
+  function loadMediaDevices() {
+    navigator.mediaDevices.enumerateDevices().then(handleDevices);
+  }
+
+  function loadHolisticsCamera() {
+    console.debug("Loading Holistic Camera...")
     if (webCamRef.current && webCamRef.current.video) {
       const video = webCamRef.current.video
       const camera = new Camera(video, {
@@ -168,6 +185,14 @@ function App() {
       });
       camera.start();
     }
+  }
+
+  function setup() {
+
+    loadMediaDevices()
+
+    // Input camera
+    loadHolisticsCamera()
 
     // Game Canvas Setup
     setupLayer()
@@ -175,18 +200,15 @@ function App() {
 
   // Actions
   function addNewCircle() {
-    new Promise((resolve, reject) => {
-      const circle: Circle = new Circle({
-        renderizationMetadata: {
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-          radius: 30
-        }
-      })
-      resolve(circleGame.addCircle(circle))
-    }).then(() => {
-      renderCircles()
+    const circle: Circle = new Circle({
+      renderizationMetadata: {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+        radius: 30
+      }
     })
+    circleGame.addCircle(circle)
+    renderCircle(circle)
   }
 
   function toggleCameraVideo() {
@@ -208,7 +230,8 @@ function App() {
   }
 
   function setupLayer() {
-    // gameLayerRef.current?.add(defaultCircleTransformer)
+    defaultCircleTransformer.nodes([])
+    gameLayerRef.current?.add(defaultCircleTransformer)
   }
 
   function resetLayer() {
@@ -217,23 +240,32 @@ function App() {
 
   function resetGame() {
     circleGame.resetGame()
-    renderCircles()
+    renderAllCircles()
+
   }
 
   function resetCirclesState() {
     circleGame.resetCirclesState()
-    renderCircles()
+    renderAllCircles()
   }
 
 
   function doColisionEffect(shape: Konva.Group, circle: Circle) {
     play()
 
-    console.log(shape)
     shape.to({
-      scaleY: 2,
-      scaleX: 2,
-      duration: 0.1
+      scaleY: 1.5,
+      scaleX: 1.5,
+      duration: 0.3,
+      rotation: 360,
+      onFinish: () => {
+        shape.to({
+          scaleY: 1.0,
+          scaleX: 1.0,
+          duration: 0,
+          rotation: 0,
+        })
+      }
     });
 
     const circleShape: any = shape.getChildren().find((s) => s.getClassName() === Konva.Circle.name)
@@ -242,87 +274,78 @@ function App() {
     })
   }
 
-  function renderCircles() {
-
+  function renderAllCircles() {
     resetLayer()
+    circleGame.circles.map((circle) => renderCircle(circle))
+  }
 
-    circleGame.circles.map((circle) => {
+  function renderCircle(circle: Circle) {
 
-      const groupShape: Konva.Group = new Konva.Group({
-        key: `circle_group_${circle.number}`,
-        id: `${circle.number}`,
-        y: circle.renderizationMetadata.y,
-        x: circle.renderizationMetadata.x,
-        draggable: true,
-        rotation: circle.renderizationMetadata.rotation,
-        scaleX: circle.renderizationMetadata.scaleX,
-        scaleY: circle.renderizationMetadata.scaleY
-      })
+    const groupShape: Konva.Group = new Konva.Group({
+      key: `circle_group_${circle.number}`,
+      id: `${circle.number}`,
+      x: (circle.renderizationMetadata.x),
+      y: (circle.renderizationMetadata.y),
+      draggable: true,
+      rotation: circle.renderizationMetadata.rotation,
+      scaleX: circle.renderizationMetadata.scaleX,
+      scaleY: circle.renderizationMetadata.scaleY,
 
-      const circleText: Konva.Text = new Konva.Text({
-        x: (circle.renderizationMetadata.x / window.innerWidth) - 5,
-        y: (circle.renderizationMetadata.y / window.innerHeight) - 8,
-        text: String(circle.number),
-        fontSize: 20,
-        fontStyle: "bold",
-        align: "center",
-        verticalAlign: "middle",
-        fill: "white"
-      })
-
-      const circleShape: Konva.Circle = new Konva.Circle({
-        key: `circle_${circle.number}`,
-        id: `${String(circle.number)}`,
-        radius: circle.renderizationMetadata.radius,
-        fill: "#edcb0c",
-        strokeWidth: 10,
-        stroke: "white"
-      })
-
-      groupShape.add(circleShape)
-      groupShape.add(circleText)
-
-      // Events
-      groupShape.on("dragend", (event: any) => {
-        const x: any = event.target.attrs.x
-        const y: any = event.target.attrs.y
-        circle.updateRenderizationMetadata({
-          ...circle.renderizationMetadata,
-          x,
-          y
-        })
-      })
-
-      groupShape.on("click", (e) => {
-        if (!e.target.parent)
-          return
-        const group: any = e.target.parent
-        const defaultCircleTransformer = new Konva.Transformer({
-          node: group,
-          flipEnabled: false,
-          keepRatio: true,
-          rotateEnabled: false,
-          enabledAnchors: [
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right"
-          ]
-
-        })
-        defaultCircleTransformer.on("transform", (e) => {
-          console.log("transformer changed", e)
-          circle.updateRenderizationMetadata({
-            ...circle.renderizationMetadata,
-            scaleX: e.target.attrs.scaleX,
-            scaleY: e.target.attrs.scaleY,
-            rotation: e.target.attrs.rotation
-          })
-        })
-        gameLayerRef.current?.add(defaultCircleTransformer)
-      })
-      gameLayerRef.current?.add(groupShape)
     })
+
+    const circleText: Konva.Text = new Konva.Text({
+      x: (circle.renderizationMetadata.x / window.innerWidth) - (circle.renderizationMetadata.radius * 0.2),
+      y: (circle.renderizationMetadata.y / window.innerHeight) - (circle.renderizationMetadata.radius * 0.3),
+      text: String(circle.number),
+      fontSize: circle.renderizationMetadata.radius * 0.8,
+      fontStyle: "bold",
+      fill: "white",
+      verticalAlign: "middle",
+      align: "center"
+    })
+
+    const circleShape: Konva.Circle = new Konva.Circle({
+      key: `circle_${circle.number}`,
+      id: `${String(circle.number)}`,
+      x: (circle.renderizationMetadata.x / window.innerWidth),
+      y: (circle.renderizationMetadata.y / window.innerHeight),
+      radius: circle.renderizationMetadata.radius,
+      fill: "#edcb0c",
+      strokeWidth: 10,
+      stroke: "white"
+    })
+
+    groupShape.add(circleShape)
+    groupShape.add(circleText)
+
+    // Events
+    groupShape.on("dragend", (event: any) => {
+      const x: any = event.target.attrs.x
+      const y: any = event.target.attrs.y
+      circle.updateRenderizationMetadata({
+        ...circle.renderizationMetadata,
+        x,
+        y
+      })
+    })
+
+    groupShape.on("click", (e) => {
+      const newRadius = Number(circleShape.attrs.radius) * 1.1
+      circle.updateRenderizationMetadata({
+        x: circle.renderizationMetadata.x,
+        y: circle.renderizationMetadata.y,
+        radius: newRadius
+      })
+      circleShape.setAttrs({
+        radius: newRadius
+      })
+      circleText.setAttrs({
+        fontSize: circleText.attrs.fontSize * 1.1,
+        x: circleText.attrs.x * 1.1,
+        y: circleText.attrs.y * 1.1,
+      })
+    })
+    gameLayerRef.current?.add(groupShape)
   }
 
   const [actions] = useState<Array<Action>>([
@@ -349,23 +372,15 @@ function App() {
   ])
 
   useEffect(() => {
-    setup()
-  }, [deviceId])
+    loadHolisticsCamera()
+  }, [devices])
 
-  useEffect(
-    () => {
-      navigator.mediaDevices.enumerateDevices().then(handleDevices);
-    },
-    [handleDevices]
-  )
+  useEffect(() => {
+    setup()
+  }, [])
 
   return (
     <div className="MainContainer">
-      {/* <video ref={webCamRef} className='InputVideo'
-        width={window.innerWidth}
-        height={window.innerHeight}
-        style={{ display: "none" }} /> */}
-
       <Webcam
         className='InputVideo'
         ref={webCamRef}
@@ -385,8 +400,6 @@ function App() {
         width={window.innerWidth}
         height={window.innerHeight}
         style={{}} />
-
-
 
       <Stage
         ref={gameCanvasRef}

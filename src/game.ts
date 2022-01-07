@@ -60,10 +60,10 @@ export class CircleGame {
   }
 
   resetGame() {
-    this.circles = [];
+    this.circles.map((c) => (c.touched = false));
   }
 
   resetCirclesState() {
-    this.circles.map((c) => (c.touched = false));
+    this.circles = [];
   }
 }
