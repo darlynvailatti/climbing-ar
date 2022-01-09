@@ -1,0 +1,33 @@
+.MainContainer {
+  position: absolute;
+  background-color: #596e73;
+  align-content: center;
+}
+
+.InputVideo {
+  position: absolute;
+
+  object-fit: cover;
+}
+
+.OutputCanvas {
+  display: block;
+  position: absolute;
+  background-color: black;
+}
+
+.GameCanvas {
+  position: absolute;
+}
+
+.ToolBar {
+  margin: 10px;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ActionsBar {
+  padding-top: 10px;
+  width: 250px;
+}

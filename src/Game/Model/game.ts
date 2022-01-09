@@ -5,6 +5,7 @@ export interface CircleRenderizationMetadata {
   scaleX?: number;
   scaleY?: number;
   rotation?: number;
+  strokeWidth?: number;
 }
 
 export interface CircleMetadata {
@@ -56,7 +57,7 @@ export class CircleGame {
   }
 
   removeCircle(number: number) {
-    this.circles = this.circles.filter((b) => b.number != number);
+    this.circles = this.circles.filter((b) => b.number !== number);
   }
 
   resetGame() {
