@@ -1,6 +1,5 @@
-import { Button, FormControlLabel, FormGroup, Stack, Switch, Typography } from "@mui/material"
-import { useContext, useState } from "react"
-import { AppContext } from "../../AppContext"
+import { Button, Stack, Switch, Typography } from "@mui/material"
+import { useState } from "react"
 
 export enum ActionInputType {
     SWITCH = "switch",
@@ -22,7 +21,6 @@ export interface ActionsBarProps {
 function ActionsBar({ actions }: ActionsBarProps) {
 
     const [fake, setFake] = useState(0)
-    const context = useContext(AppContext)
 
     function forceUpdate() {
         setFake((s: number) => {
@@ -49,7 +47,7 @@ function ActionsBar({ actions }: ActionsBarProps) {
                             )
                         case ActionInputType.SWITCH:
                             return (
-                                <Stack direction={"row"} alignItems={"center"}>
+                                <Stack key={a.label} direction={"row"} alignItems={"center"}>
                                     <Switch
                                         key={a.label}
                                         onChange={() => { a.onClick(); forceUpdate(); }}

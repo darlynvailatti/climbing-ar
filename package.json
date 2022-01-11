@@ -20,7 +20,7 @@
     "@types/react": "^17.0.20",
     "@types/react-dom": "^17.0.9",
     "device-detector-js": "^3.0.0",
-    "konva": "^8.3.1",
+    "konva": "^8.3.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-konva": "^17.0.2-5",

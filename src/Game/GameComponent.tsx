@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import './Game.css';
 import { POSE_CONNECTIONS } from '@mediapipe/holistic';
 import { Layer, Stage } from 'react-konva';
-import { Box, Divider, Grid, Paper, Stack, Toolbar, Typography } from '@mui/material';
+import { Box, Paper, Stack, Toolbar, Typography } from '@mui/material';
 import Konva from 'konva';
 import useSound from 'use-sound';
 import ActionsBar, { Action, ActionInputType } from './Components/ActionsBar';
@@ -66,6 +66,7 @@ function GameComponent() {
     }
 
     const onResults = useCallback((results: any) => {
+
         fpsTick()
         renderTrackingLandmarks(results)
         gameController.checkColisions(results, () => play())
@@ -198,7 +199,7 @@ function GameComponent() {
                             <ActionsBar actions={actions} />
                             <Box>
                                 <Stack direction={"row"}>
-                                    <Typography variant='h1'>{fps.value}</Typography>
+                                    <Typography variant='h1'>{fpsValue}</Typography>
                                     <Typography variant='caption'>FPS</Typography>
                                 </Stack>
                             </Box>
