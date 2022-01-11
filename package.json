@@ -9,6 +9,7 @@
     "@mediapipe/control_utils": "^0.6.1629159505",
     "@mediapipe/drawing_utils": "^0.3.1620248257",
     "@mediapipe/holistic": "^0.5.1635989137",
+    "@mediapipe/pose": "^0.5.1635988162",
     "@mui/material": "^5.2.6",
     "@psychobolt/react-paperjs": "^1.0.3",
     "@testing-library/jest-dom": "^5.14.1",

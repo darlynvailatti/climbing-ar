@@ -1,4 +1,4 @@
-import { Button, FormControlLabel, FormGroup, Switch } from "@mui/material"
+import { Button, FormControlLabel, FormGroup, Stack, Switch, Typography } from "@mui/material"
 import { useContext, useState } from "react"
 import { AppContext } from "../../AppContext"
 
@@ -23,7 +23,6 @@ function ActionsBar({ actions }: ActionsBarProps) {
 
     const [fake, setFake] = useState(0)
     const context = useContext(AppContext)
-    const appController = context.appGlobalController
 
     function forceUpdate() {
         setFake((s: number) => {
@@ -33,7 +32,7 @@ function ActionsBar({ actions }: ActionsBarProps) {
 
     return <>
         <div className='ActionsBar'>
-            <FormGroup>
+            <Stack direction={"column"} padding={1} spacing={1}>
                 {actions.map((a) => {
                     const disabled = a.disabled ? a.disabled() : false
                     switch (a.inputType) {
@@ -50,20 +49,22 @@ function ActionsBar({ actions }: ActionsBarProps) {
                             )
                         case ActionInputType.SWITCH:
                             return (
-                                <FormControlLabel key={a.label} control={
+                                <Stack direction={"row"} alignItems={"center"}>
                                     <Switch
                                         key={a.label}
                                         onChange={() => { a.onClick(); forceUpdate(); }}
                                         value={a.currentState}
                                         disabled={disabled} />
-                                } label={a.label}
-                                />
+                                    <Typography>{a.label}</Typography>
+                                </Stack>
+
+
                             )
                         default:
                             return <></>
                     }
                 })}
-            </FormGroup>
+            </Stack>
         </div>
     </>
 }

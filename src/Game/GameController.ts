@@ -1,6 +1,10 @@
 import Konva from "konva";
 import { Circle, CircleGame } from "./Model/game";
 
+const CONSTANTS = {
+  defaultCircleReadyColor: "#ffea00",
+  defaultCircleTouchedColor: "#00e676",
+};
 export interface GameControllerState {
   gameModel: CircleGame;
   mainLayer?: Konva.Layer;
@@ -55,18 +59,15 @@ export class GameController {
   }
 
   doColisionEffect(shape: Konva.Group, circle: Circle) {
-    // play()
     shape.to({
       scaleY: 1.5,
       scaleX: 1.5,
       duration: 0.3,
-      rotation: 360,
       onFinish: () => {
         shape.to({
           scaleY: 1.0,
           scaleX: 1.0,
           duration: 0,
-          rotation: 0,
         });
       },
     });
@@ -74,8 +75,17 @@ export class GameController {
     const circleShape: any = shape
       .getChildren()
       .find((s) => s.getClassName() === Konva.Circle.name);
+
+    const originalStrokeWidth = circleShape.attrs.strokeWidth;
     circleShape.to({
-      fill: "#32a852",
+      fill: CONSTANTS.defaultCircleTouchedColor,
+      strokeWidth: 0,
+      duration: 0.1,
+      onFinish: () => {
+        circleShape.to({
+          strokeWidth: originalStrokeWidth,
+        });
+      },
     });
   }
 
@@ -117,7 +127,7 @@ export class GameController {
       x: circle.renderizationMetadata.x / window.innerWidth,
       y: circle.renderizationMetadata.y / window.innerHeight,
       radius: circle.renderizationMetadata.radius,
-      fill: "#edcb0c",
+      fill: CONSTANTS.defaultCircleReadyColor,
       strokeWidth: circle.renderizationMetadata.strokeWidth,
       stroke: "white",
     });

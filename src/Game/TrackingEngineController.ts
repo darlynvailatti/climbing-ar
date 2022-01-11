@@ -1,10 +1,10 @@
 import { Camera } from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
-import { Holistic } from "@mediapipe/holistic";
+import { Pose } from "@mediapipe/pose";
 
 export interface TrackingEngineState {
   outputCanvas?: HTMLCanvasElement;
-  trackingEngine?: Holistic;
+  trackingEngine?: Pose;
 }
 
 export enum TrackingEngineActionType {}
@@ -27,18 +27,16 @@ export class TrackingEngineController {
   }
 
   loadTrackingEngine(onResults: (results: any) => void) {
-    this.state.trackingEngine = new Holistic({
+    this.state.trackingEngine = new Pose({
       locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
       },
     });
     this.state.trackingEngine.setOptions({
       modelComplexity: 1,
       smoothLandmarks: true,
-      refineFaceLandmarks: false,
-      enableFaceGeometry: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
+      minDetectionConfidence: 0.2,
+      minTrackingConfidence: 0.2,
     });
     this.state.trackingEngine.onResults(onResults);
   }

@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import './Game.css';
 import { POSE_CONNECTIONS } from '@mediapipe/holistic';
 import { Layer, Stage } from 'react-konva';
-import { Box, Paper, Toolbar } from '@mui/material';
+import { Box, Divider, Grid, Paper, Stack, Toolbar, Typography } from '@mui/material';
 import Konva from 'konva';
 import useSound from 'use-sound';
 import ActionsBar, { Action, ActionInputType } from './Components/ActionsBar';
@@ -159,7 +159,7 @@ function GameComponent() {
 
     useEffect(() => {
         initialSetup()
-    })
+    }, [])
 
     return (
         <div className="MainContainer">
@@ -191,13 +191,20 @@ function GameComponent() {
             </Stage>
             <Toolbar
                 className='ToolBar'>
-                <Box>
-                    <Paper variant="outlined" style={{ padding: "15px" }}>
-                        <MediaDeviceSelector />
-                        <ActionsBar actions={actions} />
-                        {fpsValue}
-                    </Paper>
-                </Box>
+                <Paper>
+                    <Box margin={1}>
+                        <Stack direction="column" spacing={2}>
+                            <MediaDeviceSelector />
+                            <ActionsBar actions={actions} />
+                            <Box>
+                                <Stack direction={"row"}>
+                                    <Typography variant='h1'>{fps.value}</Typography>
+                                    <Typography variant='caption'>FPS</Typography>
+                                </Stack>
+                            </Box>
+                        </Stack>
+                    </Box>
+                </Paper>
             </Toolbar>
         </div >
     )
