@@ -1,22 +1,28 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { AppContext } from "../../AppContext";
+import useForceUpdate from "../../hooks";
 
 function MediaDeviceSelector() {
 
     const appContext = useContext(AppContext)
     const appController = appContext.appGlobalController
-
-    const [deviceId, setDeviceId] = useState<string>("");
-    const [devices, setDevices] = useState<Array<MediaDeviceInfo>>([]);
+    const trackingController = appContext.trackingEngineController
+    const forceUpdate = useForceUpdate()
 
     const handleDevices = useCallback((mediaDevices: MediaDeviceInfo[]) => {
-        setDevices(mediaDevices.filter((device: MediaDeviceInfo) => device.kind === "videoinput"))
-    }, [setDevices]);
+        appController.setAvailableMediaDevices(mediaDevices.filter((device: MediaDeviceInfo) => device.kind === "videoinput"))
+    }, [appController.setAvailableMediaDevices]);
 
     function loadMediaDevices() {
         console.log("Loading media devices...")
         navigator.mediaDevices.enumerateDevices().then(handleDevices);
+    }
+
+    function handleMediaChange(event: any) {
+        trackingController.refreshInputDevice()
+        appController.setDeviceId(event.target.value)
+        forceUpdate()
     }
 
     useEffect(() => {
@@ -28,14 +34,12 @@ function MediaDeviceSelector() {
             <InputLabel>Input Video</InputLabel>
             <Select
                 label="Video Input"
-                value={deviceId}
+                value={appController.state.selectedDeviceId}
                 onChange={(e) => {
-                    setDeviceId(e.target.value);
-                    appController.setDeviceId(e.target.value)
+                    handleMediaChange(e)
                 }}
-                defaultValue={devices.find(Boolean)?.deviceId}
-            >
-                {devices.map((device: MediaDeviceInfo, key) => {
+                displayEmpty>
+                {appController.state.availableDevices.map((device: MediaDeviceInfo, key) => {
                     return (
                         <MenuItem
                             key={key}

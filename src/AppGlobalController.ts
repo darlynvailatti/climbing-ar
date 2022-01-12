@@ -1,5 +1,6 @@
 export interface AppGlobalState {
-  deviceId?: string;
+  selectedDeviceId?: string;
+  availableDevices: Array<MediaDeviceInfo>;
   showCamera: boolean;
   showTrackingLandmakrs: boolean;
   enableTracking: boolean;
@@ -22,6 +23,8 @@ export const initialAppGlobalState: AppGlobalState = {
   showTrackingLandmakrs: false,
   enableTracking: false,
   loading: false,
+  availableDevices: [],
+  selectedDeviceId: "",
 };
 
 export class AppController {
@@ -48,7 +51,11 @@ export class AppController {
   }
 
   setDeviceId(deviceId: string) {
-    this.state.deviceId = deviceId;
+    this.state.selectedDeviceId = deviceId;
+  }
+
+  setAvailableMediaDevices(devices: Array<MediaDeviceInfo>) {
+    this.state.availableDevices = devices;
   }
 
   dispatch(action: AppGlobalAction) {

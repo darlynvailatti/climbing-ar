@@ -49,6 +49,12 @@ export class TrackingEngineController {
     this.state.trackingEngine.close();
   }
 
+  refreshInputDevice() {
+    if (this.state.trackingEngine) {
+      this.state.trackingEngine.close();
+    }
+  }
+
   async setupTrackingCamera(inputVideo: HTMLVideoElement) {
     console.debug("Loading Holistic Camera...");
     const camera = new Camera(inputVideo, {

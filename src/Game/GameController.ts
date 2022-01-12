@@ -182,18 +182,14 @@ export class GameController {
         continue;
       }
 
-      if (
-        results.poseLandmarks ||
-        results.rightHandLandmarks ||
-        results.leftHandLandmarks
-      ) {
-        const defaultPointRadius = 5;
+      if (results.poseLandmarks) {
+        const defaultPointRadius = 2;
         const poseLandmarks = results.poseLandmarks || [];
         for (let posePoint of [...poseLandmarks]) {
           const x = posePoint.x * window.innerWidth;
           const y = posePoint.y * window.innerHeight;
 
-          if (circle.didColide(x, y, defaultPointRadius) && !circle.touched) {
+          if (circle.didColide(x, y, defaultPointRadius)) {
             circle.touch();
             this.doColisionEffect(renderedGroup, circle);
             if (onColision) onColision();

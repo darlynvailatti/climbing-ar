@@ -66,7 +66,6 @@ function GameComponent() {
     }
 
     const onResults = useCallback((results: any) => {
-
         fpsTick()
         renderTrackingLandmarks(results)
         gameController.checkColisions(results, () => play())
@@ -168,7 +167,7 @@ function GameComponent() {
                 className='InputVideo'
                 ref={webCamRef}
                 videoConstraints={{
-                    deviceId: appController.state.deviceId
+                    deviceId: appController.state.selectedDeviceId
                 }}
                 width={window.innerWidth}
                 height={window.innerHeight}
