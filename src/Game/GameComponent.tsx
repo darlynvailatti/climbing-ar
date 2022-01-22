@@ -78,7 +78,7 @@ function GameComponent() {
     }
 
     const toggleTracking = useCallback(() => {
-        if (appController.state.enableTracking) {
+        if (appController.state.trackingEnabled) {
             console.log("Closing tracking...")
             trackingEngineController.closeTracking()
             appController.toggleCamera()
@@ -120,21 +120,21 @@ function GameComponent() {
             label: "Tracking",
             onClick: () => toggleTracking(),
             inputType: ActionInputType.SWITCH,
-            currentState: appController.state.enableTracking
+            currentState: () => appController.isTrakingEnable()
         },
         {
             label: "Show Tracking Camera",
             onClick: () => appController.toggleCamera(),
             inputType: ActionInputType.SWITCH,
-            currentState: appController.state.showCamera,
-            disabled: () => !appController.state.enableTracking
+            currentState: () => appController.getShowCamera(),
+            disabled: () => !appController.isTrakingEnable()
         },
         {
             label: "Show Pose Land Marks",
             onClick: () => appController.toggleTrackingLandmarks(),
             inputType: ActionInputType.SWITCH,
-            currentState: appController.state.showTrackingLandmakrs,
-            disabled: () => !appController.state.enableTracking
+            currentState: () => appController.getShowTrackingLandmakrs(),
+            disabled: () => !appController.isTrakingEnable()
         },
         {
             label: "Add Circle",
@@ -150,7 +150,18 @@ function GameComponent() {
             label: "Reset Circles",
             onClick: () => { gameController.resetCirclesState() },
             inputType: ActionInputType.BUTTON
-
+        },
+        {
+            label: "Start",
+            onClick: () => { gameController.start() },
+            inputType: ActionInputType.BUTTON,
+            disabled: () => gameController.state.gameModel.isStarted
+        },
+        {
+            label: "Stop",
+            onClick: () => { gameController.stop() },
+            inputType: ActionInputType.BUTTON,
+            disabled: () => !gameController.state.gameModel.isStarted
         }
     ]
 

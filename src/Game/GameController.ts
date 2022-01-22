@@ -1,4 +1,5 @@
 import Konva from "konva";
+import { IFrame } from "konva/lib/types";
 import { Circle, CircleGame } from "./Model/game";
 
 const CONSTANTS = {
@@ -8,6 +9,7 @@ const CONSTANTS = {
 export interface GameControllerState {
   gameModel: CircleGame;
   mainLayer?: Konva.Layer;
+  defaultCircleAnimation?: Konva.Animation;
 }
 
 const initialGameState: GameControllerState = {
@@ -24,11 +26,97 @@ export class GameController {
 
   setup(gameLayer: Konva.Layer) {
     this.state.mainLayer = gameLayer;
+    this.renderScore();
+  }
+
+  resetLayer() {
+    this.getLayer().destroyChildren();
+  }
+
+  refreshAllNodes() {
+    this.resetLayer();
+    this.renderAllCircles();
+    this.renderScore();
+  }
+
+  renderScore() {
+    const renderedScore = this.getLayer()
+      .getChildren()
+      .find((c) => c.attrs.key === "score");
+
+    if (!renderedScore) {
+      const scoreModel = this.state.gameModel.score;
+      const scoreText = new Konva.Text({
+        key: "score",
+        text: `${this.state.gameModel.score.value}`,
+        fill: "white",
+        fontSize: 70,
+        fontVariant: "bold",
+        draggable: true,
+        x: scoreModel.renderizationMeta.x,
+        y: scoreModel.renderizationMeta.y,
+      });
+      scoreText.on("dragend", (event: any) => {
+        const x: any = event.target.attrs.x;
+        const y: any = event.target.attrs.y;
+        scoreModel.updateRenderizationMeta({
+          ...scoreModel.renderizationMeta,
+          x,
+          y,
+        });
+      });
+      this.getLayer().add(scoreText);
+    } else {
+      renderedScore.setAttr("text", this.state.gameModel.score.value);
+    }
   }
 
   getLayer() {
     if (!this.state.mainLayer) throw new Error("Main Layer is not yet setup");
     return this.state.mainLayer;
+  }
+
+  getDefaultCircleAnimation(): Konva.Animation {
+    const animation = (frame: any) => {
+      var period = 2000;
+
+      var scale = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
+
+      for (let circle of this.state.gameModel.circles) {
+        if (!circle.number) continue;
+        const renderedCircleGroup: Konva.Group = this.getCircleGroupById(
+          circle.number
+        );
+
+        if (!circle.touched) {
+          renderedCircleGroup.setAttr("opacity", scale);
+        } else {
+          renderedCircleGroup.setAttr("opacity", 100);
+        }
+      }
+    };
+
+    if (!this.state.defaultCircleAnimation)
+      this.state.defaultCircleAnimation = new Konva.Animation(
+        animation,
+        this.getLayer()
+      );
+    else {
+      this.state.defaultCircleAnimation.func = animation;
+    }
+
+    return this.state.defaultCircleAnimation;
+  }
+
+  start() {
+    this.state.gameModel.start();
+    this.getDefaultCircleAnimation().start();
+  }
+
+  stop() {
+    this.state.gameModel.stop();
+    this.getDefaultCircleAnimation().stop();
+    this.refreshAllNodes();
   }
 
   addNewCircle() {
@@ -44,18 +132,14 @@ export class GameController {
     this.renderCircle(circle);
   }
 
-  resetLayer() {
-    this.getLayer().destroyChildren();
-  }
-
   resetGame() {
     this.state.gameModel.resetGame();
-    this.renderAllCircles();
+    this.stop();
   }
 
   resetCirclesState() {
     this.state.gameModel.resetCirclesState();
-    this.renderAllCircles();
+    this.refreshAllNodes();
   }
 
   doColisionEffect(shape: Konva.Group, circle: Circle) {
@@ -90,7 +174,6 @@ export class GameController {
   }
 
   renderAllCircles() {
-    this.resetLayer();
     this.state.gameModel.circles.map((circle) => this.renderCircle(circle));
   }
 
@@ -127,7 +210,9 @@ export class GameController {
       x: circle.renderizationMetadata.x / window.innerWidth,
       y: circle.renderizationMetadata.y / window.innerHeight,
       radius: circle.renderizationMetadata.radius,
-      fill: CONSTANTS.defaultCircleReadyColor,
+      fill: circle.touched
+        ? CONSTANTS.defaultCircleTouchedColor
+        : CONSTANTS.defaultCircleReadyColor,
       strokeWidth: circle.renderizationMetadata.strokeWidth,
       stroke: "white",
     });
@@ -139,11 +224,14 @@ export class GameController {
     groupShape.on("dragend", (event: any) => {
       const x: any = event.target.attrs.x;
       const y: any = event.target.attrs.y;
-      circle.updateRenderizationMetadata({
-        ...circle.renderizationMetadata,
-        x,
-        y,
-      });
+      const updateCallback = (circle: Circle) => {
+        circle.updateRenderizationMetadata({
+          ...circle.renderizationMetadata,
+          x,
+          y,
+        });
+      };
+      this.state.gameModel.updateCircle(circle, updateCallback);
     });
 
     groupShape.on("click", (e) => {
@@ -168,16 +256,25 @@ export class GameController {
     this.getLayer().add(groupShape);
   }
 
+  getCircleGroupById(id: number): any {
+    return this.getLayer()
+      .getChildren()
+      .find((group) => Number(group.attrs.id) === id);
+  }
+
   checkColisions(results: any, onColision?: () => void) {
-    const layer = this.getLayer();
+    if (!this.state.gameModel.isStarted) {
+      return;
+    }
+
     const allNonTouchedCircles = this.state.gameModel.circles.filter(
       (c) => !c.touched
     );
 
     for (const circle of allNonTouchedCircles) {
-      const renderedGroup: any = layer
-        .getChildren()
-        .find((group) => Number(group.attrs.id) === circle.number);
+      if (!circle.number) continue;
+
+      const renderedGroup: any = this.getCircleGroupById(circle.number);
       if (!renderedGroup) {
         continue;
       }
@@ -190,8 +287,9 @@ export class GameController {
           const y = posePoint.y * window.innerHeight;
 
           if (circle.didColide(x, y, defaultPointRadius)) {
-            circle.touch();
+            this.state.gameModel.touch(circle);
             this.doColisionEffect(renderedGroup, circle);
+            this.renderScore();
             if (onColision) onColision();
             break;
           }

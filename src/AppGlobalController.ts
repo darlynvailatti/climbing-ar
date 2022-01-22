@@ -3,14 +3,14 @@ export interface AppGlobalState {
   availableDevices: Array<MediaDeviceInfo>;
   showCamera: boolean;
   showTrackingLandmakrs: boolean;
-  enableTracking: boolean;
+  trackingEnabled: boolean;
   loading: boolean;
 }
 
 export const initialAppGlobalState: AppGlobalState = {
   showCamera: false,
   showTrackingLandmakrs: false,
-  enableTracking: false,
+  trackingEnabled: false,
   loading: false,
   availableDevices: [],
   selectedDeviceId: "",
@@ -32,7 +32,7 @@ export class AppController {
   }
 
   toggleTracking() {
-    this.state.enableTracking = !this.state.enableTracking;
+    this.state.trackingEnabled = !this.state.trackingEnabled;
   }
 
   toggleLoading() {
@@ -45,5 +45,17 @@ export class AppController {
 
   setAvailableMediaDevices(devices: Array<MediaDeviceInfo>) {
     this.state.availableDevices = devices;
+  }
+
+  isTrakingEnable() {
+    return this.state.trackingEnabled;
+  }
+
+  getShowCamera() {
+    return this.state.showCamera;
+  }
+
+  getShowTrackingLandmakrs() {
+    return this.state.showTrackingLandmakrs;
   }
 }

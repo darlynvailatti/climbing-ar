@@ -10,7 +10,7 @@ export interface Action {
     label: string
     inputType: ActionInputType.SWITCH | ActionInputType.BUTTON
     onClick: () => void
-    currentState?: any
+    currentState?: () => any
     disabled?: () => boolean
 }
 
@@ -51,7 +51,7 @@ function ActionsBar({ actions }: ActionsBarProps) {
                                     <Switch
                                         key={a.label}
                                         onChange={() => { a.onClick(); forceUpdate(); }}
-                                        value={a.currentState}
+                                        value={a.currentState ? a.currentState() : () => { }}
                                         disabled={disabled} />
                                     <Typography>{a.label}</Typography>
                                 </Stack>
