@@ -39,38 +39,6 @@ export class GameController {
     this.renderScore();
   }
 
-  renderScore() {
-    const renderedScore = this.getLayer()
-      .getChildren()
-      .find((c) => c.attrs.key === "score");
-
-    if (!renderedScore) {
-      const scoreModel = this.state.gameModel.score;
-      const scoreText = new Konva.Text({
-        key: "score",
-        text: `${this.state.gameModel.score.value}`,
-        fill: "white",
-        fontSize: 70,
-        fontVariant: "bold",
-        draggable: true,
-        x: scoreModel.renderizationMeta.x,
-        y: scoreModel.renderizationMeta.y,
-      });
-      scoreText.on("dragend", (event: any) => {
-        const x: any = event.target.attrs.x;
-        const y: any = event.target.attrs.y;
-        scoreModel.updateRenderizationMeta({
-          ...scoreModel.renderizationMeta,
-          x,
-          y,
-        });
-      });
-      this.getLayer().add(scoreText);
-    } else {
-      renderedScore.setAttr("text", this.state.gameModel.score.value);
-    }
-  }
-
   getLayer() {
     if (!this.state.mainLayer) throw new Error("Main Layer is not yet setup");
     return this.state.mainLayer;
@@ -198,7 +166,7 @@ export class GameController {
         circle.renderizationMetadata.radius * 0.3,
       text: String(circle.number),
       fontSize: circle.renderizationMetadata.radius * 0.8,
-      fontStyle: "bold",
+      fontVariant: "bold",
       fill: "white",
       verticalAlign: "middle",
       align: "center",
@@ -254,6 +222,63 @@ export class GameController {
       });
     });
     this.getLayer().add(groupShape);
+  }
+
+  renderScore() {
+    const layer = this.getLayer();
+    const renderedScore = this.getLayer()
+      .getChildren()
+      .find((c) => c.attrs.key === "score_value_text");
+
+    if (!renderedScore) {
+      console.log("Rendering score...");
+      const scoreModel = this.state.gameModel.score;
+
+      const scoreLabelText = new Konva.Text({
+        key: "score_label_text",
+        x: scoreModel.renderizationMeta.x,
+        y: scoreModel.renderizationMeta.y,
+        fill: "white",
+        fontSize: 30,
+        fontVariant: "bold",
+        text: "Score",
+        draggable: true,
+        offsetY: 30,
+        offsetX: -5,
+      });
+
+      const scoreValueText = new Konva.Text({
+        key: "score_value_text",
+        text: `${this.state.gameModel.score.value}`,
+        fill: "white",
+        fontSize: 70,
+        fontVariant: "bold",
+        x: scoreModel.renderizationMeta.x,
+        y: scoreModel.renderizationMeta.y,
+        draggable: true,
+      });
+
+      const onDragMove = (event: any) => {
+        const x: any = event.target.attrs.x;
+        const y: any = event.target.attrs.y;
+        scoreModel.updateRenderizationMeta({
+          ...scoreModel.renderizationMeta,
+          x,
+          y,
+        });
+        scoreValueText.setAttr("x", x);
+        scoreValueText.setAttr("y", y);
+
+        scoreLabelText.setAttr("x", x);
+        scoreLabelText.setAttr("y", y);
+      };
+
+      scoreLabelText.on("dragmove", onDragMove);
+      scoreValueText.on("dragmove", onDragMove);
+      layer.add(scoreValueText, scoreLabelText);
+    } else {
+      renderedScore.setAttr("text", this.state.gameModel.score.value);
+    }
   }
 
   getCircleGroupById(id: number): any {
