@@ -8,7 +8,6 @@ import useSound from 'use-sound';
 import ActionsBar, { Action, ActionInputType } from './Components/ActionsBar';
 import Webcam from 'react-webcam';
 import { AppContext } from '../AppContext';
-import { AppGlobalActionType } from '../AppGlobalController';
 import MediaDeviceSelector from './Components/MediaDeviceSelector';
 
 const fps = {
@@ -82,16 +81,14 @@ function GameComponent() {
         if (appController.state.enableTracking) {
             console.log("Closing tracking...")
             trackingEngineController.closeTracking()
+            appController.toggleCamera()
+            appController.toggleTrackingLandmarks()
         } else {
             console.log("Loading tracking...")
             trackingEngineController.loadTrackingEngine(onResults)
-            appController.dispatch({ type: AppGlobalActionType.TOGGLE_LOADING })
-            setupTrackingCamera().then((r) => {
-                console.log("Tracking loaded")
-                appController.dispatch({ type: AppGlobalActionType.TOGGLE_LOADING })
-            })
+            setupTrackingCamera()
         }
-        appController.dispatch({ type: AppGlobalActionType.TOGGLE_TRACKING })
+        appController.toggleTracking()
     }, [onResults])
 
     function setupGameController() {
@@ -121,20 +118,20 @@ function GameComponent() {
     const actions: Array<Action> = [
         {
             label: "Tracking",
-            onClick: toggleTracking,
+            onClick: () => toggleTracking(),
             inputType: ActionInputType.SWITCH,
             currentState: appController.state.enableTracking
         },
         {
             label: "Show Tracking Camera",
-            onClick: () => appController.dispatch({ type: AppGlobalActionType.TOGGLE_CAMERA }),
+            onClick: () => appController.toggleCamera(),
             inputType: ActionInputType.SWITCH,
             currentState: appController.state.showCamera,
             disabled: () => !appController.state.enableTracking
         },
         {
             label: "Show Pose Land Marks",
-            onClick: () => appController.dispatch({ type: AppGlobalActionType.TOGGLE_TRACKING_LANDMARKS }),
+            onClick: () => appController.toggleTrackingLandmarks(),
             inputType: ActionInputType.SWITCH,
             currentState: appController.state.showTrackingLandmakrs,
             disabled: () => !appController.state.enableTracking

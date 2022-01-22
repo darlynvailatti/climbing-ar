@@ -10,7 +10,7 @@ export interface GameControllerState {
   mainLayer?: Konva.Layer;
 }
 
-const initialGameState = {
+const initialGameState: GameControllerState = {
   gameModel: new CircleGame(),
 };
 
