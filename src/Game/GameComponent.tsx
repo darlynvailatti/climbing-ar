@@ -28,7 +28,8 @@ function GameComponent() {
     const gameLayerRef = useRef<Konva.Layer>(null)
 
     // General
-    const [play] = useSound(`${process.env.PUBLIC_URL}/colision_2.wav`);
+    const [circleColisionSoundEffect] = useSound(`${process.env.PUBLIC_URL}/colision_2.wav`);
+    const [startCheckpointTriggerSoundEffect] = useSound(`${process.env.PUBLIC_URL}/start_checkpoint.wav`);
     const [fpsValue, setFpsValue] = useState(0)
 
     const renderTrackingLandmarks = function (results: any) {
@@ -67,7 +68,16 @@ function GameComponent() {
     const onResults = useCallback((results: any) => {
         fpsTick()
         renderTrackingLandmarks(results)
-        gameController.checkColisions(results, () => play())
+        gameController.checkCircleColisions(results, () => circleColisionSoundEffect())
+
+        if (!gameController.state.gameModel.isStarted) {
+            gameController.checkStartCheckpointColision(results, () => { })
+            if (gameController.state.gameModel.startCheckpoint.active) {
+                gameController.start()
+                startCheckpointTriggerSoundEffect()
+            }
+        }
+
     }, [fpsTick])
 
     async function setupTrackingCamera() {

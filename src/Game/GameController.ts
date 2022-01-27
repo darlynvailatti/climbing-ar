@@ -1,6 +1,6 @@
 import Konva from "konva";
-import { IFrame } from "konva/lib/types";
-import { Circle, CircleGame } from "./Model/game";
+import { Circle } from "./Model/circle";
+import { CircleGame } from "./Model/game";
 
 const CONSTANTS = {
   defaultCircleReadyColor: "#ffea00",
@@ -10,6 +10,7 @@ export interface GameControllerState {
   gameModel: CircleGame;
   mainLayer?: Konva.Layer;
   defaultCircleAnimation?: Konva.Animation;
+  defaultStartCheckpointAnimation?: Konva.Animation;
 }
 
 const initialGameState: GameControllerState = {
@@ -27,6 +28,7 @@ export class GameController {
   setup(gameLayer: Konva.Layer) {
     this.state.mainLayer = gameLayer;
     this.renderScore();
+    this.renderStartCheckpoint();
   }
 
   resetLayer() {
@@ -37,6 +39,7 @@ export class GameController {
     this.resetLayer();
     this.renderAllCircles();
     this.renderScore();
+    this.renderStartCheckpoint();
   }
 
   getLayer() {
@@ -76,14 +79,40 @@ export class GameController {
     return this.state.defaultCircleAnimation;
   }
 
+  getDefaultStartCheckpointAnimation(): Konva.Animation {
+    const animation = (frame: any) => {
+      var period = 2000;
+
+      var scale = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
+
+      const startCheckPointRendered = this.getStartCheckpointByKey();
+
+      if (!startCheckPointRendered) return;
+      startCheckPointRendered.setAttr("opacity", scale);
+    };
+
+    if (!this.state.defaultStartCheckpointAnimation)
+      this.state.defaultStartCheckpointAnimation = new Konva.Animation(
+        animation,
+        this.getLayer()
+      );
+    else {
+      this.state.defaultStartCheckpointAnimation.func = animation;
+    }
+
+    return this.state.defaultStartCheckpointAnimation;
+  }
+
   start() {
     this.state.gameModel.start();
     this.getDefaultCircleAnimation().start();
+    this.getDefaultStartCheckpointAnimation().start();
   }
 
   stop() {
     this.state.gameModel.stop();
     this.getDefaultCircleAnimation().stop();
+    this.getDefaultStartCheckpointAnimation().stop();
     this.refreshAllNodes();
   }
 
@@ -110,7 +139,7 @@ export class GameController {
     this.refreshAllNodes();
   }
 
-  doColisionEffect(shape: Konva.Group, circle: Circle) {
+  doCircleColisionEffect(shape: Konva.Group, circle: Circle) {
     shape.to({
       scaleY: 1.5,
       scaleX: 1.5,
@@ -138,6 +167,24 @@ export class GameController {
           strokeWidth: originalStrokeWidth,
         });
       },
+    });
+  }
+
+  doStartCheckPointTouchEffetc() {
+    const startCheckPointRendered = this.getStartCheckpointByKey();
+    startCheckPointRendered?.to({
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 0.2,
+    });
+  }
+
+  doStartCheckPointUntouchEffetc() {
+    const startCheckPointRendered = this.getStartCheckpointByKey();
+    startCheckPointRendered?.to({
+      scaleX: 1.0,
+      scaleY: 1.0,
+      duration: 0.2,
     });
   }
 
@@ -281,13 +328,48 @@ export class GameController {
     }
   }
 
+  renderStartCheckpoint() {
+    const layer = this.getLayer();
+    const startCheckPointRendered = this.getStartCheckpointByKey();
+
+    if (!startCheckPointRendered) {
+      const startCheckpoint = this.state.gameModel.startCheckpoint;
+      const elipse = new Konva.Circle({
+        key: "start_checkpoint",
+        x: startCheckpoint.renderizationMeta.x,
+        y: startCheckpoint.renderizationMeta.y,
+        radius: startCheckpoint.renderizationMeta.radius,
+        fill: "white",
+        draggable: true,
+      });
+
+      elipse.on("dragend", (event: any) => {
+        const x: any = event.target.attrs.x;
+        const y: any = event.target.attrs.y;
+        startCheckpoint.updateRenderizationMeta({
+          ...startCheckpoint.renderizationMeta,
+          x,
+          y,
+        });
+      });
+
+      layer.add(elipse);
+    }
+  }
+
   getCircleGroupById(id: number): any {
     return this.getLayer()
       .getChildren()
       .find((group) => Number(group.attrs.id) === id);
   }
 
-  checkColisions(results: any, onColision?: () => void) {
+  getStartCheckpointByKey() {
+    return this.getLayer()
+      .getChildren()
+      .find((c) => c.attrs.key === "start_checkpoint");
+  }
+
+  checkCircleColisions(results: any, callBack?: () => void) {
     if (!this.state.gameModel.isStarted) {
       return;
     }
@@ -313,13 +395,47 @@ export class GameController {
 
           if (circle.didColide(x, y, defaultPointRadius)) {
             this.state.gameModel.touch(circle);
-            this.doColisionEffect(renderedGroup, circle);
+            this.doCircleColisionEffect(renderedGroup, circle);
             this.renderScore();
-            if (onColision) onColision();
+            if (callBack) callBack();
             break;
           }
         }
       }
+    }
+  }
+
+  checkStartCheckpointColision(results: any, callBack?: () => void) {
+    if (results.poseLandmarks) {
+      const startCheckpoint = this.state.gameModel.startCheckpoint;
+      const poseLandmarks = results.poseLandmarks || [];
+      let didColide = false;
+
+      for (let posePoint of [...poseLandmarks]) {
+        const x = posePoint.x * window.innerWidth;
+        const y = posePoint.y * window.innerHeight;
+        if (startCheckpoint.didColide(x, y, 2)) {
+          didColide = true;
+          if (!startCheckpoint.touched) {
+            startCheckpoint.setTouched();
+            this.doStartCheckPointTouchEffetc();
+          }
+          break;
+        }
+      }
+
+      if (!didColide && startCheckpoint.touched) {
+        startCheckpoint.setUntouched();
+        const startCheckPointRendered = this.getStartCheckpointByKey();
+
+        this.doStartCheckPointUntouchEffetc();
+        startCheckPointRendered?.to({
+          scaleX: 1,
+          scaleY: 1,
+          duration: 0.2,
+        });
+      }
+      startCheckpoint.checkTrigger();
     }
   }
 }
