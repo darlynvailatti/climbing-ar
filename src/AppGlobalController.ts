@@ -9,7 +9,7 @@ export interface AppGlobalState {
 
 export const initialAppGlobalState: AppGlobalState = {
   showCamera: false,
-  showTrackingLandmakrs: false,
+  showTrackingLandmakrs: true,
   trackingEnabled: false,
   loading: false,
   availableDevices: [],
@@ -17,6 +17,7 @@ export const initialAppGlobalState: AppGlobalState = {
 };
 
 export class AppController {
+
   state: AppGlobalState;
 
   constructor() {
@@ -58,4 +59,5 @@ export class AppController {
   getShowTrackingLandmakrs() {
     return this.state.showTrackingLandmakrs;
   }
+
 }

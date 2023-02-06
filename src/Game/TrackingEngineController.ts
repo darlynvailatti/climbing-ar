@@ -1,19 +1,22 @@
 import { Camera } from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import { Holistic } from "@mediapipe/holistic";
 import { Pose } from "@mediapipe/pose";
 
 export interface TrackingEngineState {
   outputCanvas?: HTMLCanvasElement;
-  trackingEngine?: Pose;
+  trackingEngine?: Holistic;
 }
 
-export enum TrackingEngineActionType {}
+export enum TrackingEngineActionType { }
 
 export interface TrackingEngineAction {
   type: TrackingEngineActionType;
 }
 
 export const inititalGameState: TrackingEngineState = {};
+
+export const defaultPosePointRadius = 10;
 
 export class TrackingEngineController {
   state: TrackingEngineState;
@@ -27,16 +30,19 @@ export class TrackingEngineController {
   }
 
   loadTrackingEngine(onResults: (results: any) => void) {
-    this.state.trackingEngine = new Pose({
+    this.state.trackingEngine = new Holistic({
       locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
       },
     });
     this.state.trackingEngine.setOptions({
       modelComplexity: 1,
       smoothLandmarks: true,
-      minDetectionConfidence: 0.2,
-      minTrackingConfidence: 0.2,
+      enableSegmentation: true,
+      smoothSegmentation: true,
+      refineFaceLandmarks: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
     });
     this.state.trackingEngine.onResults(onResults);
   }

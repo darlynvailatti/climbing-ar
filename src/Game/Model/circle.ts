@@ -30,9 +30,7 @@ export class Circle {
     const circleRadius = this.renderizationMetadata.radius;
     const circleX = this.renderizationMetadata.x;
     const circleY = this.renderizationMetadata.y;
-    var dx = circleX + circleRadius - (x + radius);
-    var dy = circleY + circleRadius - (y + radius);
-    var distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < circleRadius + radius;
+    const d = Math.sqrt((circleX - x) ** 2 + (circleY - y) ** 2);
+    return d <= radius + circleRadius;
   }
 }

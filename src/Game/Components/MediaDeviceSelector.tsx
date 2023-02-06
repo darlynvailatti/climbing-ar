@@ -30,8 +30,8 @@ function MediaDeviceSelector() {
     }, [])
 
     return (
-        <FormControl>
-            <InputLabel>Input Video</InputLabel>
+        <FormControl variant="standard" sx={{ minWidth: "100%" }} size="small">
+            <InputLabel>Select a input video source</InputLabel>
             <Select
                 label="Video Input"
                 value={appController.state.selectedDeviceId}

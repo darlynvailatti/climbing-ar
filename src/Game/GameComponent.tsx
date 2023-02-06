@@ -1,11 +1,11 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import './Game.css';
-import { POSE_CONNECTIONS } from '@mediapipe/holistic';
+import { POSE_CONNECTIONS, HAND_CONNECTIONS } from '@mediapipe/holistic';
 import { Layer, Stage } from 'react-konva';
-import { Box, Paper, Stack, Toolbar, Typography } from '@mui/material';
+import { Box, Button, Fade, Grid, Modal } from '@mui/material';
 import Konva from 'konva';
 import useSound from 'use-sound';
-import ActionsBar, { Action, ActionInputType } from './Components/ActionsBar';
+import { Action, ActionInputType } from './Components/ActionsBar';
 import Webcam from 'react-webcam';
 import { AppContext } from '../AppContext';
 import MediaDeviceSelector from './Components/MediaDeviceSelector';
@@ -28,6 +28,7 @@ function GameComponent() {
     const gameLayerRef = useRef<Konva.Layer>(null)
 
     // General
+    const [readyToStart, setReadyToStart] = useState(false)
     const [circleColisionSoundEffect] = useSound(`${process.env.PUBLIC_URL}/colision_2.wav`);
     const [startCheckpointTriggerSoundEffect] = useSound(`${process.env.PUBLIC_URL}/start_checkpoint.wav`);
     const [fpsValue, setFpsValue] = useState(0)
@@ -49,6 +50,19 @@ function GameComponent() {
 
         if (appController.state.showTrackingLandmakrs) {
             trackingEngineController.renderMarks(ctx, results.poseLandmarks, { lineWidth: 1 })
+            trackingEngineController.renderConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
+                { color: '#00FF00', lineWidth: 4 });
+            trackingEngineController.renderConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS,
+                { color: '#CC0000', lineWidth: 5 });
+            trackingEngineController.renderConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS,
+                { color: '#00CC00', lineWidth: 5 });
+
+            trackingEngineController.renderMarks(ctx, results.poseLandmarks,
+                { color: '#FF0000', lineWidth: 2 });
+            trackingEngineController.renderMarks(ctx, results.leftHandLandmarks,
+                { color: '#00FF00', lineWidth: 2 });
+            trackingEngineController.renderMarks(ctx, results.rightHandLandmarks,
+                { color: '#FF0000', lineWidth: 2 });
             trackingEngineController.renderConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 3 })
         }
         ctx.restore();
@@ -69,6 +83,7 @@ function GameComponent() {
         fpsTick()
         renderTrackingLandmarks(results)
         gameController.checkCircleColisions(results, () => circleColisionSoundEffect())
+        gameController.renderScore()
 
         if (!gameController.state.gameModel.isStarted) {
             gameController.checkStartCheckpointColision(results, () => { })
@@ -87,7 +102,7 @@ function GameComponent() {
         await trackingEngineController.setupTrackingCamera(webCamRef.current.video)
     }
 
-    const toggleTracking = useCallback(() => {
+    const toggleTracking = () => {
         if (appController.state.trackingEnabled) {
             console.log("Closing tracking...")
             trackingEngineController.closeTracking()
@@ -99,7 +114,7 @@ function GameComponent() {
             setupTrackingCamera()
         }
         appController.toggleTracking()
-    }, [onResults])
+    }
 
     function setupGameController() {
         console.debug("Setuping game controller...")
@@ -117,6 +132,11 @@ function GameComponent() {
         trackingEngineController.setup(trackingOutputCanvasRef.current)
     }
 
+    function handleOnConfirmSetup() {
+        if (appController.state.selectedDeviceId)
+            setReadyToStart(true)
+    }
+
     function initialSetup() {
         setupGameController()
         setupTrackingController()
@@ -124,6 +144,15 @@ function GameComponent() {
             setFpsValue(fps.value)
         }, 1000)
     }
+
+    useEffect(() => {
+        if (readyToStart) {
+            initialSetup()
+            setTimeout(() => {
+                toggleTracking()
+            }, 1000)
+        }
+    }, [readyToStart])
 
     const actions: Array<Action> = [
         {
@@ -176,54 +205,74 @@ function GameComponent() {
     ]
 
     useEffect(() => {
-        initialSetup()
-    }, [])
+        if (readyToStart)
+            initialSetup()
+    }, [readyToStart])
 
     return (
         <div className="MainContainer">
-            <Webcam
-                className='InputVideo'
-                ref={webCamRef}
-                videoConstraints={{
-                    deviceId: appController.state.selectedDeviceId
-                }}
-                width={window.innerWidth}
-                height={window.innerHeight}
-                style={{ display: "none" }}
-                onUserMediaError={(e) => {
-                    console.error(`Error on loading camera: ${e}`)
-                }}>
-            </Webcam>
 
-            <canvas ref={trackingOutputCanvasRef}
-                className='OutputCanvas'
-                width={window.innerWidth}
-                height={window.innerHeight}
-                style={{}} />
+            {Boolean(readyToStart) ?
+                <>
+                    <Webcam
+                        className='InputVideo'
+                        ref={webCamRef}
+                        videoConstraints={{
+                            deviceId: appController.state.selectedDeviceId
+                        }}
+                        width={window.innerWidth}
+                        height={window.innerHeight}
+                        style={{ display: "none" }}
+                        onUserMediaError={(e) => {
+                            console.error(`Error on loading camera: ${e}`)
+                        }}>
+                    </Webcam>
 
-            <Stage
-                className='GameCanvas'
-                width={window.innerWidth}
-                height={window.innerHeight} >
-                <Layer ref={gameLayerRef} />
-            </Stage>
-            <Toolbar
-                className='ToolBar'>
-                <Paper>
-                    <Box margin={1}>
-                        <Stack direction="column" spacing={2}>
-                            <MediaDeviceSelector />
-                            <ActionsBar actions={actions} />
-                            <Box>
-                                <Stack direction={"row"}>
-                                    <Typography variant='h1'>{fpsValue}</Typography>
-                                    <Typography variant='caption'>FPS</Typography>
-                                </Stack>
-                            </Box>
-                        </Stack>
-                    </Box>
-                </Paper>
-            </Toolbar>
+                    <canvas ref={trackingOutputCanvasRef}
+                        className='OutputCanvas'
+                        width={window.innerWidth}
+                        height={window.innerHeight}
+                        style={{}} />
+
+                    <Stage
+                        className='GameCanvas'
+                        width={window.innerWidth}
+                        height={window.innerHeight} >
+                        <Layer ref={gameLayerRef} />
+                    </Stage>
+                </> :
+                <Modal
+                    open={true}
+                    onClose={() => false}
+                >
+                    <Fade in={true}>
+
+                        <Box sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: 500,
+                            bgcolor: 'background.paper',
+                            boxShadow: 24,
+                            p: 6,
+
+                        }}>
+                            <Grid direction={'row'} container alignItems={'flex-end'}>
+
+                                <Grid xs={10} md={8} padding={1} item>
+                                    <MediaDeviceSelector />
+                                </Grid>
+                                <Grid xs={2} md={2} padding={1} item>
+                                    <Button variant='contained' onClick={handleOnConfirmSetup}>
+                                        Confirm
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Fade>
+                </Modal>}
+
         </div >
     )
 }

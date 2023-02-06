@@ -50,11 +50,8 @@ export class StartCheckPoint {
     const circleRadius = this.renderizationMeta.radius;
     const circleX = this.renderizationMeta.x;
     const circleY = this.renderizationMeta.y;
-    var dx = circleX + circleRadius - (x + radius);
-    var dy = circleY + circleRadius - (y + radius);
-    var distance = Math.sqrt(dx * dx + dy * dy);
-    const didColide = distance < circleRadius + radius;
-    return didColide;
+    const d = Math.sqrt((circleX - x) ** 2 + (circleY - y) ** 2);
+    return d <= radius + circleRadius;
   }
 
   checkTrigger(): void {
