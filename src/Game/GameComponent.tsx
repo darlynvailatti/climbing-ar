@@ -5,7 +5,6 @@ import { Layer, Stage } from 'react-konva';
 import { Box, Button, Fade, Grid, Modal } from '@mui/material';
 import Konva from 'konva';
 import useSound from 'use-sound';
-import { Action, ActionInputType } from './Components/ActionsBar';
 import Webcam from 'react-webcam';
 import { AppContext } from '../AppContext';
 import MediaDeviceSelector from './Components/MediaDeviceSelector';
@@ -154,63 +153,9 @@ function GameComponent() {
         }
     }, [readyToStart])
 
-    const actions: Array<Action> = [
-        {
-            label: "Tracking",
-            onClick: () => toggleTracking(),
-            inputType: ActionInputType.SWITCH,
-            currentState: () => appController.isTrakingEnable()
-        },
-        {
-            label: "Show Tracking Camera",
-            onClick: () => appController.toggleCamera(),
-            inputType: ActionInputType.SWITCH,
-            currentState: () => appController.getShowCamera(),
-            disabled: () => !appController.isTrakingEnable()
-        },
-        {
-            label: "Show Pose Land Marks",
-            onClick: () => appController.toggleTrackingLandmarks(),
-            inputType: ActionInputType.SWITCH,
-            currentState: () => appController.getShowTrackingLandmakrs(),
-            disabled: () => !appController.isTrakingEnable()
-        },
-        {
-            label: "Add Circle",
-            onClick: () => { gameController.addNewCircle() },
-            inputType: ActionInputType.BUTTON
-        },
-        {
-            label: "Reset Game",
-            onClick: () => { gameController.resetGame() },
-            inputType: ActionInputType.BUTTON
-        },
-        {
-            label: "Reset Circles",
-            onClick: () => { gameController.resetCirclesState() },
-            inputType: ActionInputType.BUTTON
-        },
-        {
-            label: "Start",
-            onClick: () => { gameController.start() },
-            inputType: ActionInputType.BUTTON,
-            disabled: () => gameController.state.gameModel.isStarted
-        },
-        {
-            label: "Stop",
-            onClick: () => { gameController.stop() },
-            inputType: ActionInputType.BUTTON,
-            disabled: () => !gameController.state.gameModel.isStarted
-        }
-    ]
-
-    useEffect(() => {
-        if (readyToStart)
-            initialSetup()
-    }, [readyToStart])
 
     return (
-        <div className="MainContainer">
+        <div >
 
             {Boolean(readyToStart) ?
                 <>
