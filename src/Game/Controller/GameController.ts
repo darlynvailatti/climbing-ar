@@ -1,20 +1,31 @@
 import Konva from "konva";
-import { Circle } from "./Model/circle";
-import { CircleGame } from "./Model/game";
+import { Circle } from "../Model/circle";
+import { CircleGame } from "../Model/game";
 import { defaultPosePointRadius } from "./TrackingEngineController";
+import { CircleInteractionEvent, CircleTouchedEvent, GameControllerCallbackEvents } from "./types";
 
 const CONSTANTS = {
   defaultCircleReadyColor: "#ffea00",
   defaultCircleTouchedColor: "#00e676",
+  startCheckpointCircleNumber: -1
 };
+
+export interface GameKeyboard {
+  decreaseKeyIsPressed: boolean
+  removeKeyIsPressed: boolean
+}
+
 export interface GameControllerState {
   gameModel: CircleGame;
   mainLayer?: Konva.Layer;
   defaultCircleAnimation?: Konva.Animation;
   defaultStartCheckpointAnimation?: Konva.Animation;
+  callbackEvents?: GameControllerCallbackEvents
+  scoreUpdater?: NodeJS.Timer
+  keyboard?: GameKeyboard
 }
 
-const initialGameState: GameControllerState = {
+export const initialGameState: GameControllerState = {
   gameModel: new CircleGame(),
 };
 
@@ -26,10 +37,42 @@ export class GameController {
     this.state = state ?? initialGameState;
   }
 
-  setup(gameLayer: Konva.Layer) {
+  setup(gameLayer: Konva.Layer, callbackEvents?: GameControllerCallbackEvents) {
     this.state.mainLayer = gameLayer;
+    this.state.callbackEvents = callbackEvents
     this.renderScore();
     this.renderStartCheckpoint();
+    this.setupKeyboard()
+  }
+
+  setupKeyboard() {
+    const state = this.state
+    state.keyboard = {
+      decreaseKeyIsPressed: false,
+      removeKeyIsPressed: false
+    }
+
+    document.onkeydown = function (event) {
+
+      if (!state.keyboard) return
+
+      if (event.key === 'd') {
+        state.keyboard.decreaseKeyIsPressed = true
+      }
+
+      if (event.key === 'r')
+        state.keyboard.removeKeyIsPressed = true
+    }
+
+    document.onkeyup = function (event) {
+      if (!state.keyboard) return
+      if (event.key === 'd') {
+        state.keyboard.decreaseKeyIsPressed = false
+      }
+
+      if (event.key === 'r')
+        state.keyboard.removeKeyIsPressed = false
+    }
   }
 
   resetLayer() {
@@ -109,6 +152,15 @@ export class GameController {
     this.state.gameModel.start();
     this.getDefaultCircleAnimation().start();
     this.getDefaultStartCheckpointAnimation().start();
+
+    // Keep score up-to-date during execution
+    this.state.scoreUpdater = setInterval(() => {
+      this.renderScore()
+    }, 0)
+
+
+    if (this.state.callbackEvents?.onStart)
+      this.state.callbackEvents?.onStart()
   }
 
   stop() {
@@ -116,17 +168,26 @@ export class GameController {
     this.getDefaultCircleAnimation().stop();
     this.getDefaultStartCheckpointAnimation().stop();
     this.refreshAllNodes();
+
+    // Stop score timer renderer
+    clearInterval(this.state.scoreUpdater)
+
+    if (this.state.callbackEvents?.onStop)
+      this.state.callbackEvents?.onStop()
   }
 
   addNewCircle() {
-    const circle: Circle = new Circle({
-      renderizationMetadata: {
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-        radius: 30,
-        strokeWidth: 10,
-      },
-    });
+    const circleNumber = this.state.gameModel.circles.length + 1
+    const circle: Circle = new Circle(
+      circleNumber,
+      {
+        renderizationMetadata: {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+          radius: 30,
+          strokeWidth: 10,
+        },
+      });
     this.state.gameModel.addCircle(circle);
     this.renderCircle(circle);
   }
@@ -276,8 +337,24 @@ export class GameController {
     });
 
     groupShape.on("click", (e) => {
-      const newRadius = Number(circleShape.attrs.radius) * 1.1;
-      const newStrokeWidth = circleShape.attrs.strokeWidth * 1.1;
+      const isDecreaseKeyPressed = this.state.keyboard?.decreaseKeyIsPressed
+      const isRemoveKeyPressed = this.state.keyboard?.removeKeyIsPressed
+
+      if (isRemoveKeyPressed) {
+        this.state.gameModel.removeCircle(circle.number)
+        groupShape.destroy()
+        return
+      }
+
+      const currentRadius = Number(circleShape.attrs.radius)
+      const newRadius = isDecreaseKeyPressed ? currentRadius - (currentRadius * 0.1) : currentRadius * 1.1
+      const newStrokeWidth = isDecreaseKeyPressed ?
+        circleShape.attrs.strokeWidth - (0.1 * circleShape.attrs.strokeWidth)
+        : circleShape.attrs.strokeWidth * 1.1
+
+      console.log(currentRadius, newRadius)
+      if (newRadius <= 0 || newStrokeWidth <= 0) return
+
       circle.updateRenderizationMetadata({
         x: circle.renderizationMetadata.x,
         y: circle.renderizationMetadata.y,
@@ -289,11 +366,12 @@ export class GameController {
         strokeWidth: newStrokeWidth,
       });
       circleText.setAttrs({
-        fontSize: circleText.attrs.fontSize * 1.1,
-        x: circleText.attrs.x * 1.1,
-        y: circleText.attrs.y * 1.1,
+        fontSize: isDecreaseKeyPressed ? circleText.attrs.fontSize - (circleText.attrs.fontSize * 0.1) : circleText.attrs.fontSize * 1.1,
+        x: isDecreaseKeyPressed ? circleText.attrs.x - (circleText.attrs.x * 0.1) : circleText.attrs.x * 1.1,
+        y: isDecreaseKeyPressed ? circleText.attrs.y - (circleText.attrs.y * 0.1) : circleText.attrs.y * 1.1,
       });
     });
+
     this.getLayer().add(groupShape);
   }
 
@@ -304,9 +382,9 @@ export class GameController {
       .find((c) => c.attrs.key === "score_value_text");
 
     const renderedTotalTime = this.getLayer()
-    .getChildren()
-    .find((c) => c.attrs.key === "score_total_time");
-  
+      .getChildren()
+      .find((c) => c.attrs.key === "score_total_time");
+
     if (!renderedScore) {
       console.log("Rendering score...");
       const scoreModel = this.state.gameModel.score;
@@ -357,9 +435,9 @@ export class GameController {
       renderedScore.setAttr("text", this.state.gameModel.score.value);
     }
 
-    if(!renderedTotalTime){
+    if (!renderedTotalTime) {
       const scoreModel = this.state.gameModel.score;
-     
+
       const scoreTotalTimeLabelText = new Konva.Text({
         key: "score_total_time_label_text",
         x: scoreModel.renderizationMeta.x,
@@ -404,7 +482,7 @@ export class GameController {
       scoreTotalTime.on("dragmove", onDragMove);
       scoreTotalTimeLabelText.on("dragmove", onDragMove);
       layer.add(scoreTotalTime, scoreTotalTimeLabelText);
-    }else{
+    } else {
       renderedTotalTime.setAttr("text", this.state.gameModel.getTotalTime());
     }
   }
@@ -459,6 +537,24 @@ export class GameController {
       .find((c) => c.attrs.key === "start_checkpoint");
   }
 
+  touchCircle(circle: Circle) {
+    const circleNumber = circle.number
+    if (!circleNumber) return
+
+    this.state.gameModel.touch(circle);
+
+    const renderedGroup: any = this.getCircleGroupById(circleNumber);
+    if (!renderedGroup) {
+      return;
+    }
+
+    this.doCircleColisionEffect(renderedGroup, circle);
+    if (this.state.callbackEvents?.onCircleTouched)
+      this.state.callbackEvents?.onCircleTouched({
+        circleNumber: circleNumber
+      })
+  }
+
   checkCircleColisions(results: any, callBack?: () => void) {
     if (!this.state.gameModel.isStarted) {
       return;
@@ -468,13 +564,14 @@ export class GameController {
       (c) => !c.touched
     );
 
+    // Session has ended
+    if (allNonTouchedCircles.length === 0) {
+      console.log("All circles were touched, session has ended")
+      this.stop()
+    }
+
     allNonTouchedCircles.forEach((circle) => {
       if (!circle.number) return;
-
-      const renderedGroup: any = this.getCircleGroupById(circle.number);
-      if (!renderedGroup) {
-        return;
-      }
 
       const poseLandmarks = results.poseLandmarks || [];
       const rightHandLandmarks = results.rightHandLandmarks || [];
@@ -485,8 +582,7 @@ export class GameController {
         const y = posePoint.y * window.innerHeight;
 
         if (circle.didColide(x, y, defaultPosePointRadius)) {
-          this.state.gameModel.touch(circle);
-          this.doCircleColisionEffect(renderedGroup, circle);
+          this.touchCircle(circle)
           if (callBack) callBack();
           return;
         }
@@ -518,14 +614,52 @@ export class GameController {
     if (!didColide && startCheckpoint.touched) {
       startCheckpoint.setUntouched();
       this.doStartCheckPointUntouchEffetc();
-      const startCheckPointRendered = this.getStartCheckpointByKey();
-      startCheckPointRendered?.to({
-        scaleX: 1,
-        scaleY: 1,
-        duration: 0.2,
-        fill: 'white'
-      });
     }
+
     startCheckpoint.checkTrigger();
+
+    if(startCheckpoint.active){
+      this.resetGame()
+    }
+
+    if (this.state.callbackEvents?.onCircleInteraction)
+      this.state.callbackEvents.onCircleInteraction({
+        circleNumber: -1,
+        params: {
+          touched: startCheckpoint.touched,
+          active: startCheckpoint.active
+        }
+      })
+
+  }
+
+  // Event Callback Listeners
+  circleTouched(event: CircleTouchedEvent) {
+    console.log("Circle touched...", event)
+    const circle = this.state.gameModel.circles.find((c) => c.number === event.circleNumber)
+    if (circle)
+      this.touchCircle(circle)
+
+  }
+
+  circleInteraction(event: CircleInteractionEvent) {
+    // Start checkpoint
+    if (event.circleNumber === CONSTANTS.startCheckpointCircleNumber) {
+
+      const startCheckPoint = this.state.gameModel.startCheckpoint
+
+      if (event.params.active && !startCheckPoint.active)
+        startCheckPoint.setIsActive()
+      else if (!event.params.active && startCheckPoint.active)
+        startCheckPoint.setIsInactive()
+
+      if (event.params.touched && !startCheckPoint.touched) {
+        startCheckPoint.setTouched()
+        this.doStartCheckPointTouchEffetc()
+      } else if (!event.params.touched && startCheckPoint.touched) {
+        startCheckPoint.setUntouched()
+        this.doStartCheckPointUntouchEffetc()
+      }
+    }
   }
 }

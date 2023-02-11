@@ -9,11 +9,12 @@ export interface CircleMetadata {
 }
 
 export class Circle {
-  number?: number;
+  number: number;
   touched?: boolean;
   renderizationMetadata: CircleRenderizationMeta;
 
-  constructor(metaData: CircleMetadata) {
+  constructor(number: number, metaData: CircleMetadata) {
+    this.number = number
     this.touched = false;
     this.renderizationMetadata = metaData.renderizationMetadata;
   }

@@ -13,7 +13,9 @@ export enum BroadcastAction {
     TRACK = "TRACK",
     SHOW_CAMERA = "SHOW_CAMERA",
     SHOW_TRACKING = "SHOW_TRACKING",
-    RESTART = "RESTART"
+    RESTART = "RESTART",
+    CIRCLE_INTERACTION = "CIRCLE_INTERACTION",
+    CIRCLE_TOUCHED = "CIRCLE_TOUCHED"
 }
 
 export interface BroadcastMessage {

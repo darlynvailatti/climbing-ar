@@ -2490,10 +2490,22 @@
   dependencies:
     "@types/jest" "*"
 
+"@types/three@^0.149.0":
+  version "0.149.0"
+  resolved "https://registry.yarnpkg.com/@types/three/-/three-0.149.0.tgz#f48c03ffcf35b2d196f3532b51bc845e96f6090e"
+  integrity sha512-fgNBm9LWc65ER/W0cvoXdC0iMy7Ke9e2CONmEr6Jt8sDSY3sw4DgOubZfmdZ747dkPhbQrgRQAWwDEr2S/7IEg==
+  dependencies:
+    "@types/webxr" "*"
+
 "@types/trusted-types@^2.0.2":
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@types/trusted-types/-/trusted-types-2.0.2.tgz#fc25ad9943bcac11cceb8168db4f275e0e72e756"
   integrity sha512-F5DIZ36YVLE+PN+Zwws4kJogq47hNgX3Nx6WyDJ3kcplxyke3XIzB8uK5n/Lpm1HBsbGzd6nmGehL8cPekP+Tg==
+
+"@types/webxr@*":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@types/webxr/-/webxr-0.5.1.tgz#4908349419104bd476a4252d04e4c3abb496748d"
+  integrity sha512-xlFXPfgJR5vIuDefhaHuUM9uUgvPaXB6GKdXy2gdEh8gBWQZ2ul24AJz3foUd8NNKlSTQuWYJpCb1/pL81m1KQ==
 
 "@types/ws@^8.5.1":
   version "8.5.4"

@@ -1,12 +1,13 @@
 import { createTheme, ThemeProvider } from '@mui/material';
 import './App.css';
 import AppContextWrapper from './AppContext';
-import GameComponent from './Game/GameComponent';
+import Backstage from './Game/Backstage';
 import {
   createBrowserRouter,
   RouterProvider
 } from "react-router-dom";
-import Backstage from './Game/Backstage';
+import Stage from './Game/Stage';
+import Lab from './Lab/Lab';
 
 const darkTheme = createTheme({
   palette: {
@@ -16,12 +17,16 @@ const darkTheme = createTheme({
 
 const router = createBrowserRouter([
   {
-    path: '/stage',
-    element: <GameComponent/>
-  },
-  {
     path: '/backstage',
     element: <Backstage/>
+  },
+  {
+    path: '/stage',
+    element: <Stage/>
+  },
+  {
+    path: '/lab',
+    element: <Lab/>
   }
 ])
 

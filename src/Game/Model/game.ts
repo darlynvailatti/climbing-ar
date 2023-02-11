@@ -31,8 +31,6 @@ export class CircleGame {
   }
 
   addCircle(ball: Circle) {
-    const number = this.circles.length + 1;
-    ball.number = number;
     this.circles.push(ball);
   }
 
@@ -60,14 +58,10 @@ export class CircleGame {
   touch(circle: Circle) {
     circle.touch();
     this.updateScore(circle);
-
-    if(this.circles.every(c => c.touched)){
-      this.stop()
-    }
   }
 
   updateScore(circle: Circle) {
-    this.score.value += circle.renderizationMetadata.radius;
+    this.score.value += circle.number;
     this.score.value = Math.trunc(this.score.value);
   }
 
