@@ -2,7 +2,7 @@ import Konva from "konva";
 import { Circle } from "../Model/circle";
 import { CircleGame } from "../Model/game";
 import { defaultPosePointRadius } from "./TrackingEngineController";
-import { CircleInteractionEvent, CircleTouchedEvent, GameControllerCallbackEvents } from "./types";
+import { CircleInteractionEvent, CircleRemovedEvent, CircleTouchedEvent, GameControllerCallbackEvents } from "./types";
 
 const CONSTANTS = {
   defaultCircleReadyColor: "#ffea00",
@@ -93,9 +93,9 @@ export class GameController {
 
   getDefaultCircleAnimation(): Konva.Animation {
     const animation = (frame: any) => {
-      var period = 2000;
+      var period = 1000;
 
-      var scale = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
+      var opacity = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
 
       for (let circle of this.state.gameModel.circles) {
         if (!circle.number) continue;
@@ -104,7 +104,7 @@ export class GameController {
         );
 
         if (!circle.touched) {
-          renderedCircleGroup.setAttr("opacity", scale);
+          renderedCircleGroup.setAttr("opacity", opacity);
         } else {
           renderedCircleGroup.setAttr("opacity", 100);
         }
@@ -125,14 +125,14 @@ export class GameController {
 
   getDefaultStartCheckpointAnimation(): Konva.Animation {
     const animation = (frame: any) => {
-      var period = 2000;
+      var period = 1000;
 
-      var scale = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
+      var opacity = Math.abs(Math.sin((frame.time * 2 * Math.PI) / period));
 
       const startCheckPointRendered = this.getStartCheckpointByKey();
 
       if (!startCheckPointRendered) return;
-      startCheckPointRendered.setAttr("opacity", scale);
+      startCheckPointRendered.setAttr("opacity", opacity);
       startCheckPointRendered.setAttr('fill', 'red')
     };
 
@@ -192,7 +192,19 @@ export class GameController {
     this.renderCircle(circle);
   }
 
+  removeCircle(circleNumber: number) {
+    this.state.gameModel.removeCircle(circleNumber)
+    const renderedCircle = this.getCircleGroupById(circleNumber)
+    renderedCircle.destroy()
+
+    if (this.state.callbackEvents?.onCircleRemoved)
+      this.state.callbackEvents.onCircleRemoved({
+        circleNumber
+      })
+  }
+
   resetGame() {
+    console.log("Reseting game...")
     this.state.gameModel.resetGame();
     this.stop();
   }
@@ -341,8 +353,7 @@ export class GameController {
       const isRemoveKeyPressed = this.state.keyboard?.removeKeyIsPressed
 
       if (isRemoveKeyPressed) {
-        this.state.gameModel.removeCircle(circle.number)
-        groupShape.destroy()
+        this.removeCircle(circle.number)
         return
       }
 
@@ -352,7 +363,6 @@ export class GameController {
         circleShape.attrs.strokeWidth - (0.1 * circleShape.attrs.strokeWidth)
         : circleShape.attrs.strokeWidth * 1.1
 
-      console.log(currentRadius, newRadius)
       if (newRadius <= 0 || newStrokeWidth <= 0) return
 
       circle.updateRenderizationMetadata({
@@ -374,6 +384,38 @@ export class GameController {
 
     this.getLayer().add(groupShape);
   }
+
+  // renderLastCircleHand() {
+  //   const lastCircleGroup = this.getCircleGroupById(this.state.gameModel.circles.length)
+
+  //   // Only for the last circle
+  //   var imageObj = new Image();
+  //   imageObj.src = 'https://cdn-icons-png.flaticon.com/512/8611/8611457.png';
+
+  //   imageObj.onload = () => {
+  //     const key = 'circle_hand'
+  //     const renderedHand = this.getLayer()
+  //       .getChildren()
+  //       .find((group) => group.attrs.key === key);
+
+  //     const updatedProperties = {
+  //       key,
+  //       image: imageObj,
+  //       x: lastCircleGroup.attrs.x / window.innerWidth,
+  //       y: lastCircleGroup.attrs.y / window.innerHeight,
+  //       width: 50,
+  //       height: 50
+  //     }
+  //     if(renderedHand){
+  //       console.log("Updating hand icon: ", updatedProperties)
+  //       renderedHand.setAttrs(updatedProperties)
+  //     }else{
+  //       let rightHandImage: Konva.Image = new Konva.Image(updatedProperties)
+  //       this.getLayer().add(rightHandImage)
+  //       console.log("Creating hand icon: ", rightHandImage)
+  //     }
+  //   }
+  // }
 
   renderScore() {
     const layer = this.getLayer();
@@ -570,24 +612,58 @@ export class GameController {
       this.stop()
     }
 
-    allNonTouchedCircles.forEach((circle) => {
+    for(const circle of allNonTouchedCircles) {
       if (!circle.number) return;
 
       const poseLandmarks = results.poseLandmarks || [];
       const rightHandLandmarks = results.rightHandLandmarks || [];
       const lefttHandLandmarks = results.leftHandLandmarks || [];
+      const isLastCircle = this.state.gameModel.circles.length === circle.number
 
-      for (let posePoint of [...poseLandmarks, ...rightHandLandmarks, ...lefttHandLandmarks]) {
-        const x = posePoint.x * window.innerWidth;
-        const y = posePoint.y * window.innerHeight;
+      if (isLastCircle) {
+        let didColideRightHand = false
+        let didColideLeftHand = false
 
-        if (circle.didColide(x, y, defaultPosePointRadius)) {
+        for (let posePoint of [...rightHandLandmarks]) {
+          const x = posePoint.x * window.innerWidth;
+          const y = posePoint.y * window.innerHeight;
+          if (circle.didColide(x, y, defaultPosePointRadius)) {
+            didColideRightHand = true
+            break
+          }
+        }
+
+        for (let posePoint of [...lefttHandLandmarks]) {
+          const x = posePoint.x * window.innerWidth;
+          const y = posePoint.y * window.innerHeight;
+          if (circle.didColide(x, y, defaultPosePointRadius)) {
+            didColideLeftHand = true
+            break
+          }
+        }
+
+        if (didColideLeftHand && didColideRightHand) {
           this.touchCircle(circle)
           if (callBack) callBack();
           return;
         }
+
+      } else {
+        for (let posePoint of [...poseLandmarks, ...rightHandLandmarks, ...lefttHandLandmarks]) {
+          const x = posePoint.x * window.innerWidth;
+          const y = posePoint.y * window.innerHeight;
+
+          if (circle.didColide(x, y, defaultPosePointRadius)) {
+
+
+
+            this.touchCircle(circle)
+            if (callBack) callBack();
+            return;
+          }
+        }
       }
-    })
+    }
   }
 
   checkStartCheckpointColision(results: any, callBack?: () => void) {
@@ -618,7 +694,7 @@ export class GameController {
 
     startCheckpoint.checkTrigger();
 
-    if(startCheckpoint.active){
+    if (startCheckpoint.active) {
       this.resetGame()
     }
 
@@ -648,8 +724,10 @@ export class GameController {
 
       const startCheckPoint = this.state.gameModel.startCheckpoint
 
-      if (event.params.active && !startCheckPoint.active)
+      if (event.params.active && !startCheckPoint.active){
         startCheckPoint.setIsActive()
+        this.resetGame()
+      }
       else if (!event.params.active && startCheckPoint.active)
         startCheckPoint.setIsInactive()
 
@@ -661,5 +739,10 @@ export class GameController {
         this.doStartCheckPointUntouchEffetc()
       }
     }
+  }
+
+  circleRemoved(event: CircleRemovedEvent) {
+    console.log("Circle removed", event)
+    this.removeCircle(event.circleNumber)
   }
 }

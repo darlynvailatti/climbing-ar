@@ -1,4 +1,5 @@
 export interface AppGlobalState {
+  detectColisions: boolean;
   selectedDeviceId?: string;
   availableDevices: Array<MediaDeviceInfo>;
   showCamera: boolean;
@@ -14,6 +15,7 @@ export const initialAppGlobalState: AppGlobalState = {
   loading: false,
   availableDevices: [],
   selectedDeviceId: "",
+  detectColisions: true
 };
 
 export class AppController {
@@ -22,6 +24,10 @@ export class AppController {
 
   constructor() {
     this.state = initialAppGlobalState;
+  }
+
+  toggleColisionDetection() {
+    this.state.detectColisions = !this.state.detectColisions
   }
 
   toggleCamera() {
@@ -58,6 +64,10 @@ export class AppController {
 
   getShowTrackingLandmakrs() {
     return this.state.showTrackingLandmakrs;
+  }
+
+  getDetectColision() {
+    return this.state.detectColisions
   }
 
 }

@@ -1,47 +1,61 @@
-import { Add, Remove, Start, Stop } from '@mui/icons-material';
+import { Add, Remove, Start, Stop, Radar, Polyline, Videocam } from '@mui/icons-material';
 import { Divider, Grid, ListItemIcon, ListItemText, MenuItem, MenuList, Paper, Typography } from '@mui/material';
 import { useContext } from 'react';
 import { AppContext } from '../../AppContext';
+import useForceUpdate from '../../hooks';
 import { BroadcastAction } from '../Model/constants';
 
 export default function BackstageMenu() {
 
     const appContext = useContext(AppContext)
+    const forceUpdate = useForceUpdate()
 
 
     const addCircle = () => {
         appContext.gameController.addNewCircle()
         appContext.executeAction(BroadcastAction.ADD_CIRCLE, {})
+        forceUpdate()
     }
 
     const start = () => {
         appContext.gameController.start()
         appContext.executeAction(BroadcastAction.START_GAME, {})
+        forceUpdate()
     }
 
     const stop = () => {
         appContext.gameController.stop()
         appContext.executeAction(BroadcastAction.STOP_GAME, {})
+        forceUpdate()
     }
 
     const resetCircles = () => {
         appContext.gameController.resetCirclesState()
         appContext.executeAction(BroadcastAction.RESET_CIRCLES, {})
+        forceUpdate()
     }
 
     const resetGame = () => {
         appContext.gameController.resetGame()
         appContext.executeAction(BroadcastAction.RESET_GAME, {})
+        forceUpdate()
     }
 
     const showTracking = () => {
         appContext.appGlobalController.toggleTrackingLandmarks()
         appContext.executeAction(BroadcastAction.SHOW_TRACKING, {})
+        forceUpdate()
     }
 
     const showCamera = () => {
         appContext.appGlobalController.toggleCamera()
         appContext.executeAction(BroadcastAction.SHOW_CAMERA, {})
+        forceUpdate()
+    }
+
+    const detectColisions = () => {
+        appContext.appGlobalController.toggleColisionDetection()
+        forceUpdate()
     }
 
     return (
@@ -99,15 +113,23 @@ export default function BackstageMenu() {
                     <Divider />
                     <MenuItem onClick={showTracking}>
                         <ListItemIcon>
-                            <Remove />
+                            <Polyline color={appContext.appGlobalController.getShowTrackingLandmakrs() ? 'primary' : 'inherit'}/>
                         </ListItemIcon>
                         <ListItemText>Show Tracking Land Marks</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={showCamera}>
                         <ListItemIcon>
-                            <Remove />
+                            <Videocam color={appContext.appGlobalController.getShowCamera() ? 'primary' : 'inherit'}/>
                         </ListItemIcon>
                         <ListItemText>Show Tracking Camera</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={detectColisions}>
+                        <ListItemIcon>
+                            <Radar color={appContext.appGlobalController.getDetectColision() ? 'primary' : 'inherit'}/>
+                        </ListItemIcon>
+                        <ListItemText>
+                            Detect Colisions
+                        </ListItemText>
                     </MenuItem>
                 </MenuList>
             </Paper>

@@ -3,7 +3,7 @@ import { Layer, Stage } from "react-konva";
 import Konva from 'konva';
 import { AppContext } from "../AppContext";
 import { BroadcastAction, Broadcasting, BroadcastMessage } from "./Model/constants";
-import { CircleInteractionEvent, CircleTouchedEvent } from "./Controller/types";
+import { CircleInteractionEvent, CircleTouchedEvent, CircleRemovedEvent } from "./Controller/types";
 
 export default function Backstage() {
     const appContext = useContext(AppContext)
@@ -28,8 +28,11 @@ export default function Backstage() {
             [BroadcastAction.STOP_GAME]: () => appContext.gameController.stop(),
             [BroadcastAction.RESET_CIRCLES]: () => appContext.gameController.resetCirclesState(),
             [BroadcastAction.RESET_GAME]: () => appContext.gameController.resetGame(),
+
+            // From Events
             [BroadcastAction.CIRCLE_INTERACTION]: (params: CircleInteractionEvent) => appContext.gameController.circleInteraction(params),
             [BroadcastAction.CIRCLE_TOUCHED]: (params: CircleTouchedEvent) => appContext.gameController.circleTouched(params),
+            [BroadcastAction.CIRCLE_REMOVED]: (params: CircleRemovedEvent) => appContext.gameController.circleRemoved(params),
 
             // App global
             [BroadcastAction.RESTART]: () => restart()

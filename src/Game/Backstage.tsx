@@ -81,11 +81,18 @@ function Backstage() {
     // }
 
     const onResults = (results: any) => {
+
+        const gameIsNotStarted = !gameController.state.gameModel.isStarted
+        const detectColisionIsEnabled = appContext.appGlobalController.getDetectColision()
+
         // fpsTick()
         renderTrackingLandmarks(results)
+
+        if(!detectColisionIsEnabled) return
+
         gameController.checkCircleColisions(results, () => circleColisionSoundEffect())
 
-        if (!gameController.state.gameModel.isStarted) {
+        if (gameIsNotStarted) {
             gameController.checkStartCheckpointColision(results, () => { })
             if (gameController.state.gameModel.startCheckpoint.active) {
                 gameController.start()
@@ -128,10 +135,13 @@ function Backstage() {
             onCircleTouched(circleTouched) {
                 appContext.executeAction(BroadcastAction.CIRCLE_TOUCHED, circleTouched)
             },
+            onCircleRemoved(circleRemoved) {
+                appContext.executeAction(BroadcastAction.CIRCLE_REMOVED, circleRemoved)
+            },
             onStart() {
                 appContext.executeAction(BroadcastAction.START_GAME, {})
             },
-            onStop(){
+            onStop() {
                 appContext.executeAction(BroadcastAction.STOP_GAME, {})
             }
         })
@@ -200,7 +210,7 @@ function Backstage() {
                         <Layer ref={gameLayerRef} />
                     </Stage>
 
-                    <BackstageMenu/>
+                    <BackstageMenu />
 
                 </> :
                 <Modal

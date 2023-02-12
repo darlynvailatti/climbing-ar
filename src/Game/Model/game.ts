@@ -66,12 +66,15 @@ export class CircleGame {
   }
 
   getTotalTime(){
+    let totalTime = 0
     if(this.stopedAt && this.startedAt){
-      return this.stopedAt - this.startedAt
+      totalTime = this.stopedAt - this.startedAt
     }else if(this.startedAt){
-      return Date.now() - this.startedAt
+      totalTime = Date.now() - this.startedAt
     }else{
-      return 0
+      totalTime = 0
     }
+
+    return totalTime / 1000
   }
 }

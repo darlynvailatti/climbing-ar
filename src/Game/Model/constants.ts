@@ -1,8 +1,6 @@
 export enum Broadcasting {
-
     MAIN_CHANNEL="climbing-ar-main-channel"
 }
-
 
 export enum BroadcastAction {
     ADD_CIRCLE = 'ADD_CIRCLE',
@@ -15,7 +13,8 @@ export enum BroadcastAction {
     SHOW_TRACKING = "SHOW_TRACKING",
     RESTART = "RESTART",
     CIRCLE_INTERACTION = "CIRCLE_INTERACTION",
-    CIRCLE_TOUCHED = "CIRCLE_TOUCHED"
+    CIRCLE_TOUCHED = "CIRCLE_TOUCHED",
+    CIRCLE_REMOVED = "CIRCLE_REMOVED"
 }
 
 export interface BroadcastMessage {
