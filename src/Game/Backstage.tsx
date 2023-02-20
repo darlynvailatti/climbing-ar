@@ -10,6 +10,7 @@ import { AppContext } from '../AppContext';
 import MediaDeviceSelector from './Components/MediaDeviceSelector';
 import BackstageMenu from './Components/BackstageMenu';
 import { BroadcastAction } from './Model/constants';
+import useForceUpdate from '../hooks';
 
 // const fps = {
 //     start: Date.now(),
@@ -24,6 +25,7 @@ function Backstage() {
     const trackingEngineController = appContext.trackingEngineController
     const gameController = appContext.gameController
 
+    const forceUpdate = useForceUpdate()
     const webCamRef = useRef<Webcam>(null)
     const trackingOutputCanvasRef = useRef<HTMLCanvasElement>(null)
     const gameLayerRef = useRef<Konva.Layer>(null)
@@ -176,6 +178,11 @@ function Backstage() {
             }, 1000)
         }
     }, [readyToStart])
+
+    useEffect(() => {
+        console.log("Device id changed...", appController.state.selectedDeviceId)
+        forceUpdate()
+    }, [appController.state.selectedDeviceId])
 
 
     return (

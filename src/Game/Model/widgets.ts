@@ -21,6 +21,8 @@ export class StartCheckPoint {
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
       radius: 30,
+      scaleX: 1,
+      scaleY: 1
     };
   }
 
@@ -47,9 +49,9 @@ export class StartCheckPoint {
   }
 
   didColide(x: number, y: number, radius: number): boolean {
-    const circleRadius = this.renderizationMeta.radius;
-    const circleX = this.renderizationMeta.x;
-    const circleY = this.renderizationMeta.y;
+    const circleRadius = this.renderizationMeta.radius * Math.max(this.renderizationMeta.scaleX || 1, this.renderizationMeta.scaleY || 1);
+    const circleX = this.renderizationMeta.x
+    const circleY = this.renderizationMeta.y
     const d = Math.sqrt((circleX - x) ** 2 + (circleY - y) ** 2);
     return d <= radius + circleRadius;
   }

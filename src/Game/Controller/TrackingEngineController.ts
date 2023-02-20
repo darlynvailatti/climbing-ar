@@ -38,7 +38,7 @@ export class TrackingEngineController {
     this.state.trackingEngine.setOptions({
       modelComplexity: 1,
       smoothLandmarks: true,
-      enableSegmentation: true,
+      enableSegmentation: false,
       smoothSegmentation: true,
       refineFaceLandmarks: false,
       minDetectionConfidence: 0.5,

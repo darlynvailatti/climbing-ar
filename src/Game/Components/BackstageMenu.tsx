@@ -63,9 +63,9 @@ export default function BackstageMenu() {
             sx={{
                 position: "absolute",
                 margin: "auto",
-                width: 280,
-                marginTop: 10,
-                marginLeft: 10
+                width: 250,
+                marginTop: 2,
+                marginLeft: 2
             }}>
 
             <Paper elevation={20}>
@@ -97,13 +97,6 @@ export default function BackstageMenu() {
                             ⌘V
                         </Typography>
                     </MenuItem>
-                    <Divider />
-                    <MenuItem onClick={resetCircles}>
-                        <ListItemIcon>
-                            <Remove />
-                        </ListItemIcon>
-                        <ListItemText>Reset Circles</ListItemText>
-                    </MenuItem>
                     <MenuItem onClick={resetGame}>
                         <ListItemIcon>
                             <Remove />
@@ -115,7 +108,7 @@ export default function BackstageMenu() {
                         <ListItemIcon>
                             <Polyline color={appContext.appGlobalController.getShowTrackingLandmakrs() ? 'primary' : 'inherit'}/>
                         </ListItemIcon>
-                        <ListItemText>Show Tracking Land Marks</ListItemText>
+                        <ListItemText>Show Tracking Marks</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={showCamera}>
                         <ListItemIcon>
@@ -130,6 +123,13 @@ export default function BackstageMenu() {
                         <ListItemText>
                             Detect Colisions
                         </ListItemText>
+                    </MenuItem>
+                    <Divider/>
+                    <MenuItem onClick={resetCircles}>
+                        <ListItemIcon>
+                            <Remove />
+                        </ListItemIcon>
+                        <ListItemText>Reset Circles</ListItemText>
                     </MenuItem>
                 </MenuList>
             </Paper>

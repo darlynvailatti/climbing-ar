@@ -86,6 +86,14 @@ export class GameController {
     this.renderStartCheckpoint();
   }
 
+  resetStartCheckpoint() {
+    const startCheckpointGroup = this.getStartCheckpointByKey()
+    if(startCheckpointGroup){
+      startCheckpointGroup.destroy()
+    }
+    this.renderStartCheckpoint();
+  }
+
   getLayer() {
     if (!this.state.mainLayer) throw new Error("Main Layer is not yet setup");
     return this.state.mainLayer;
@@ -99,7 +107,7 @@ export class GameController {
 
       for (let circle of this.state.gameModel.circles) {
         if (!circle.number) continue;
-        const renderedCircleGroup: Konva.Group = this.getCircleGroupById(
+        const renderedCircleGroup: Konva.Group = this.getCircleGroupByNumber(
           circle.number
         );
 
@@ -155,7 +163,7 @@ export class GameController {
 
     // Keep score up-to-date during execution
     this.state.scoreUpdater = setInterval(() => {
-      this.renderScore()
+      this.updateScore()
     }, 0)
 
 
@@ -167,7 +175,7 @@ export class GameController {
     this.state.gameModel.stop();
     this.getDefaultCircleAnimation().stop();
     this.getDefaultStartCheckpointAnimation().stop();
-    this.refreshAllNodes();
+    this.resetStartCheckpoint()
 
     // Stop score timer renderer
     clearInterval(this.state.scoreUpdater)
@@ -194,7 +202,7 @@ export class GameController {
 
   removeCircle(circleNumber: number) {
     this.state.gameModel.removeCircle(circleNumber)
-    const renderedCircle = this.getCircleGroupById(circleNumber)
+    const renderedCircle = this.getCircleGroupByNumber(circleNumber)
     renderedCircle.destroy()
 
     if (this.state.callbackEvents?.onCircleRemoved)
@@ -207,6 +215,7 @@ export class GameController {
     console.log("Reseting game...")
     this.state.gameModel.resetGame();
     this.stop();
+    this.refreshAllNodes();
   }
 
   resetCirclesState() {
@@ -215,15 +224,17 @@ export class GameController {
   }
 
   doCircleColisionEffect(shape: Konva.Group, circle: Circle) {
+    const originalScaleX =  shape.attrs.scaleX
+    const originalScaleY = shape.attrs.scaleY
     shape.to({
-      scaleY: 1.5,
-      scaleX: 1.5,
+      scaleY: originalScaleX + 0.5,
+      scaleX: originalScaleY + 0.5,
       duration: 0.3,
       onFinish: () => {
         shape.to({
-          scaleY: 1.0,
-          scaleX: 1.0,
-          duration: 0,
+          scaleY: originalScaleY,
+          scaleX: originalScaleX,
+          duration: 0.3,
         });
       },
     });
@@ -246,20 +257,22 @@ export class GameController {
   }
 
   doStartCheckPointTouchEffetc() {
-    const startCheckPointRendered = this.getStartCheckpointByKey();
-    if (!startCheckPointRendered) return
-    function pulse(startCheckPointRendered: any, state: GameController) {
+    const startCheckPointRenderedGroup = this.getStartCheckpointByKey();
+    if (!startCheckPointRenderedGroup) return
+
+    const startCheckpointShape = startCheckPointRenderedGroup.getChildren()[0]
+    function pulse(startCheckpointShape: any, state: GameController) {
       const startCheckpoint = state.state.gameModel.startCheckpoint;
       if (!startCheckpoint.touched || state.state.gameModel.isStarted) return
 
-      startCheckPointRendered.to({
+      startCheckpointShape.to({
         scaleX: 1.2,
         scaleY: 1.2,
         duration: 0.1,
         easing: Konva.Easings.EaseInOut,
         fill: 'white',
         onFinish: () => {
-          startCheckPointRendered.to({
+          startCheckpointShape.to({
             scaleX: 1,
             scaleY: 1,
             duration: 0.1,
@@ -267,19 +280,21 @@ export class GameController {
             fill: 'red',
             onFinish: () => {
               // Call the pulse function again to repeat the animation
-              pulse(startCheckPointRendered, state);
+              pulse(startCheckpointShape, state);
             }
           });
         }
       });
     }
 
-    pulse(startCheckPointRendered, this)
+    pulse(startCheckpointShape, this)
   }
 
   doStartCheckPointUntouchEffetc() {
     const startCheckPointRendered = this.getStartCheckpointByKey();
-    startCheckPointRendered?.to({
+    if (!startCheckPointRendered) return
+    const startCheckpointShape = startCheckPointRendered.getChildren()[0]
+    startCheckpointShape?.to({
       scaleX: 1.0,
       scaleY: 1.0,
       duration: 0.2,
@@ -299,8 +314,8 @@ export class GameController {
       y: circle.renderizationMetadata.y,
       draggable: true,
       rotation: circle.renderizationMetadata.rotation,
-      scaleX: circle.renderizationMetadata.scaleX,
-      scaleY: circle.renderizationMetadata.scaleY,
+      scaleX: circle.renderizationMetadata.scaleX || 1,
+      scaleY: circle.renderizationMetadata.scaleY || 1,
     });
 
     const circleText: Konva.Text = new Konva.Text({
@@ -321,8 +336,8 @@ export class GameController {
     const circleShape: Konva.Circle = new Konva.Circle({
       key: `circle_${circle.number}`,
       id: `${String(circle.number)}`,
-      x: circle.renderizationMetadata.x / window.innerWidth,
-      y: circle.renderizationMetadata.y / window.innerHeight,
+      // x: circle.renderizationMetadata.x / window.innerWidth,
+      // y: circle.renderizationMetadata.y / window.innerHeight,
       radius: circle.renderizationMetadata.radius,
       fill: circle.touched
         ? CONSTANTS.defaultCircleTouchedColor
@@ -349,234 +364,180 @@ export class GameController {
     });
 
     groupShape.on("click", (e) => {
-      const isDecreaseKeyPressed = this.state.keyboard?.decreaseKeyIsPressed
-      const isRemoveKeyPressed = this.state.keyboard?.removeKeyIsPressed
-
-      if (isRemoveKeyPressed) {
-        this.removeCircle(circle.number)
-        return
-      }
-
-      const currentRadius = Number(circleShape.attrs.radius)
-      const newRadius = isDecreaseKeyPressed ? currentRadius - (currentRadius * 0.1) : currentRadius * 1.1
-      const newStrokeWidth = isDecreaseKeyPressed ?
-        circleShape.attrs.strokeWidth - (0.1 * circleShape.attrs.strokeWidth)
-        : circleShape.attrs.strokeWidth * 1.1
-
-      if (newRadius <= 0 || newStrokeWidth <= 0) return
-
-      circle.updateRenderizationMetadata({
-        x: circle.renderizationMetadata.x,
-        y: circle.renderizationMetadata.y,
-        radius: newRadius,
-        strokeWidth: newStrokeWidth,
-      });
-      circleShape.setAttrs({
-        radius: newRadius,
-        strokeWidth: newStrokeWidth,
-      });
-      circleText.setAttrs({
-        fontSize: isDecreaseKeyPressed ? circleText.attrs.fontSize - (circleText.attrs.fontSize * 0.1) : circleText.attrs.fontSize * 1.1,
-        x: isDecreaseKeyPressed ? circleText.attrs.x - (circleText.attrs.x * 0.1) : circleText.attrs.x * 1.1,
-        y: isDecreaseKeyPressed ? circleText.attrs.y - (circleText.attrs.y * 0.1) : circleText.attrs.y * 1.1,
-      });
+      this._onClickResizableGroup(
+        groupShape,
+        () => this.removeCircle(circle.number),
+        (group: Konva.Group) => {
+          circle.updateRenderizationMetadata({
+            ...circle.renderizationMetadata,
+            scaleX: group.attrs.scaleX,
+            scaleY: group.attrs.scaleY
+          });
+        }
+      )
     });
 
     this.getLayer().add(groupShape);
   }
 
-  // renderLastCircleHand() {
-  //   const lastCircleGroup = this.getCircleGroupById(this.state.gameModel.circles.length)
-
-  //   // Only for the last circle
-  //   var imageObj = new Image();
-  //   imageObj.src = 'https://cdn-icons-png.flaticon.com/512/8611/8611457.png';
-
-  //   imageObj.onload = () => {
-  //     const key = 'circle_hand'
-  //     const renderedHand = this.getLayer()
-  //       .getChildren()
-  //       .find((group) => group.attrs.key === key);
-
-  //     const updatedProperties = {
-  //       key,
-  //       image: imageObj,
-  //       x: lastCircleGroup.attrs.x / window.innerWidth,
-  //       y: lastCircleGroup.attrs.y / window.innerHeight,
-  //       width: 50,
-  //       height: 50
-  //     }
-  //     if(renderedHand){
-  //       console.log("Updating hand icon: ", updatedProperties)
-  //       renderedHand.setAttrs(updatedProperties)
-  //     }else{
-  //       let rightHandImage: Konva.Image = new Konva.Image(updatedProperties)
-  //       this.getLayer().add(rightHandImage)
-  //       console.log("Creating hand icon: ", rightHandImage)
-  //     }
-  //   }
-  // }
-
   renderScore() {
     const layer = this.getLayer();
-    const renderedScore = this.getLayer()
-      .getChildren()
-      .find((c) => c.attrs.key === "score_value_text");
+    const scoreModel = this.state.gameModel.score;
 
-    const renderedTotalTime = this.getLayer()
-      .getChildren()
-      .find((c) => c.attrs.key === "score_total_time");
 
+    const scoreGroup = new Konva.Group({
+      key: "score",
+      ...scoreModel.renderizationMeta,
+      draggable: true,
+    })
+
+    const scoreLabelText = new Konva.Text({
+      key: "score_label_text",
+      x: scoreModel.renderizationMeta.x / window.innerWidth,
+      y: scoreModel.renderizationMeta.y / window.innerHeight,
+      fill: "white",
+      fontSize: 30,
+      fontVariant: "bold",
+      text: "Score",
+      offsetY: 30,
+      offsetX: -5,
+    });
+
+    const scoreValueText = new Konva.Text({
+      key: "score_value_text",
+      text: `${this.state.gameModel.score.value}`,
+      fill: "white",
+      fontSize: 70,
+      fontVariant: "bold",
+      x: scoreModel.renderizationMeta.x / window.innerWidth,
+      y: scoreModel.renderizationMeta.y / window.innerHeight
+    });
+
+    const scoreTotalTimeLabelText = new Konva.Text({
+      key: "score_total_time_label_text",
+      x: scoreModel.renderizationMeta.x / window.innerWidth,
+      y: scoreModel.renderizationMeta.y / window.innerHeight,
+      fill: "white",
+      fontSize: 30,
+      fontVariant: "bold",
+      text: "Total time",
+      offsetY: 110,
+      offsetX: -5,
+    });
+
+    const scoreTotalTime = new Konva.Text({
+      key: "score_total_time",
+      x: scoreModel.renderizationMeta.x / window.innerWidth,
+      y: scoreModel.renderizationMeta.y / window.innerHeight,
+      fill: "white",
+      fontSize: 30,
+      fontVariant: "bold",
+      text: `${this.state.gameModel.getTotalTime()}`,
+      offsetY: 70,
+      offsetX: -5,
+    });
+
+    scoreGroup.add(scoreLabelText)
+    scoreGroup.add(scoreValueText)
+    scoreGroup.add(scoreTotalTimeLabelText)
+    scoreGroup.add(scoreTotalTime)
+
+    scoreGroup.on("dragend", (event: any) => {
+      const x: any = event.target.attrs.x;
+      const y: any = event.target.attrs.y;
+      scoreModel.updateRenderizationMeta({
+        ...scoreModel.renderizationMeta,
+        x,
+        y,
+      });
+    });
+
+    scoreGroup.on("click", () => {
+      this._onClickResizableGroup(
+        scoreGroup,
+        () => { },
+        (group: Konva.Group) => {
+          scoreModel.updateRenderizationMeta({
+            ...scoreModel.renderizationMeta,
+            ...group.attrs
+          })
+        }
+      )
+    })
+    layer.add(scoreGroup)
+  }
+
+  updateScore() {
+    const renderedScore = this.getByGroupKey("score")
     if (!renderedScore) {
-      console.log("Rendering score...");
-      const scoreModel = this.state.gameModel.score;
-
-      const scoreLabelText = new Konva.Text({
-        key: "score_label_text",
-        x: scoreModel.renderizationMeta.x,
-        y: scoreModel.renderizationMeta.y,
-        fill: "white",
-        fontSize: 30,
-        fontVariant: "bold",
-        text: "Score",
-        draggable: true,
-        offsetY: 30,
-        offsetX: -5,
-      });
-
-      const scoreValueText = new Konva.Text({
-        key: "score_value_text",
-        text: `${this.state.gameModel.score.value}`,
-        fill: "white",
-        fontSize: 70,
-        fontVariant: "bold",
-        x: scoreModel.renderizationMeta.x,
-        y: scoreModel.renderizationMeta.y,
-        draggable: true,
-      });
-
-      const onDragMove = (event: any) => {
-        const x: any = event.target.attrs.x;
-        const y: any = event.target.attrs.y;
-        scoreModel.updateRenderizationMeta({
-          ...scoreModel.renderizationMeta,
-          x,
-          y,
-        });
-        scoreValueText.setAttr("x", x);
-        scoreValueText.setAttr("y", y);
-
-        scoreLabelText.setAttr("x", x);
-        scoreLabelText.setAttr("y", y);
-      };
-
-      scoreLabelText.on("dragmove", onDragMove);
-      scoreValueText.on("dragmove", onDragMove);
-      layer.add(scoreValueText, scoreLabelText);
-    } else {
-      renderedScore.setAttr("text", this.state.gameModel.score.value);
+      return
     }
 
-    if (!renderedTotalTime) {
-      const scoreModel = this.state.gameModel.score;
+    const scoreTotalTimeText = renderedScore.getChildren().find((shape: any) => shape.attrs.key === 'score_total_time')
+    const scoreText = renderedScore.getChildren().find((shape: any) => shape.attrs.key === 'score_value_text')
 
-      const scoreTotalTimeLabelText = new Konva.Text({
-        key: "score_total_time_label_text",
-        x: scoreModel.renderizationMeta.x,
-        y: scoreModel.renderizationMeta.y,
-        fill: "white",
-        fontSize: 30,
-        fontVariant: "bold",
-        text: "Total time",
-        draggable: true,
-        offsetY: 110,
-        offsetX: -5,
-      });
-
-      const scoreTotalTime = new Konva.Text({
-        key: "score_total_time",
-        x: scoreModel.renderizationMeta.x,
-        y: scoreModel.renderizationMeta.y,
-        fill: "white",
-        fontSize: 30,
-        fontVariant: "bold",
-        text: `${this.state.gameModel.getTotalTime()}`,
-        draggable: true,
-        offsetY: 70,
-        offsetX: -5,
-      });
-
-
-      const onDragMove = (event: any) => {
-        const x: any = event.target.attrs.x;
-        const y: any = event.target.attrs.y;
-        scoreModel.updateRenderizationMeta({
-          ...scoreModel.renderizationMeta,
-          x,
-          y,
-        });
-        scoreTotalTime.setAttr("x", x);
-        scoreTotalTime.setAttr("y", y);
-
-        scoreTotalTimeLabelText.setAttr("x", x);
-        scoreTotalTimeLabelText.setAttr("y", y);
-      };
-      scoreTotalTime.on("dragmove", onDragMove);
-      scoreTotalTimeLabelText.on("dragmove", onDragMove);
-      layer.add(scoreTotalTime, scoreTotalTimeLabelText);
-    } else {
-      renderedTotalTime.setAttr("text", this.state.gameModel.getTotalTime());
-    }
+    scoreText?.setAttr('text', this.state.gameModel.score.value)
+    scoreTotalTimeText?.setAttr('text', this.state.gameModel.getTotalTime())
   }
 
   renderStartCheckpoint() {
     const layer = this.getLayer();
-    const startCheckPointRendered = this.getStartCheckpointByKey();
+    const startCheckpoint = this.state.gameModel.startCheckpoint;
 
-    if (!startCheckPointRendered) {
-      const startCheckpoint = this.state.gameModel.startCheckpoint;
-      const elipse = new Konva.Circle({
-        key: "start_checkpoint",
-        x: startCheckpoint.renderizationMeta.x,
-        y: startCheckpoint.renderizationMeta.y,
-        radius: startCheckpoint.renderizationMeta.radius,
-        fill: "white",
-        draggable: true,
+    const startCheckPointGroup = new Konva.Group({
+      key: "start_checkpoint",
+      x: startCheckpoint.renderizationMeta.x,
+      y: startCheckpoint.renderizationMeta.y,
+      draggable: true,
+      scaleX: startCheckpoint.renderizationMeta.scaleX,
+      scaleY: startCheckpoint.renderizationMeta.scaleY,
+    })
+
+    const elipse = new Konva.Circle({
+      x: startCheckpoint.renderizationMeta.x / window.innerWidth,
+      y: startCheckpoint.renderizationMeta.y / window.innerHeight,
+      radius: startCheckpoint.renderizationMeta.radius,
+      fill: "white"
+    });
+
+    startCheckPointGroup.add(elipse)
+    startCheckPointGroup.on("dragend", (event: any) => {
+      const x: any = event.target.attrs.x;
+      const y: any = event.target.attrs.y;
+      startCheckpoint.updateRenderizationMeta({
+        ...startCheckpoint.renderizationMeta,
+        x,
+        y,
       });
+    });
 
-      elipse.on("dragend", (event: any) => {
-        const x: any = event.target.attrs.x;
-        const y: any = event.target.attrs.y;
-        startCheckpoint.updateRenderizationMeta({
-          ...startCheckpoint.renderizationMeta,
-          x,
-          y,
-        });
-      });
+    startCheckPointGroup.on('click', (event: any) => {
 
-      elipse.on('click', (event: any) => {
-        const newRadius = Number(elipse.attrs.radius) * 1.1
-        elipse.setAttr('radius', newRadius)
-        startCheckpoint.updateRenderizationMeta({
-          ...startCheckpoint.renderizationMeta,
-          radius: newRadius
-        });
-      })
+      this._onClickResizableGroup(
+        startCheckPointGroup,
+        () => { },
+        (group: Konva.Group) => {
+          startCheckpoint.updateRenderizationMeta({
+            ...startCheckpoint.renderizationMeta,
+            ...group.attrs
+          });
+        }
+      )
+    })
 
-      layer.add(elipse);
-    }
+    layer.add(startCheckPointGroup);
   }
 
-  getCircleGroupById(id: number): any {
-    return this.getLayer()
-      .getChildren()
-      .find((group) => Number(group.attrs.id) === id);
+  getByGroupKey(key: string): any {
+    return this.getLayer().getChildren().find((group) => group.attrs.key === key);
+  }
+
+  getCircleGroupByNumber(id: number): any {
+    return this.getByGroupKey(`circle_group_${id}`)
   }
 
   getStartCheckpointByKey() {
-    return this.getLayer()
-      .getChildren()
-      .find((c) => c.attrs.key === "start_checkpoint");
+    return this.getByGroupKey("start_checkpoint")
   }
 
   touchCircle(circle: Circle) {
@@ -585,7 +546,7 @@ export class GameController {
 
     this.state.gameModel.touch(circle);
 
-    const renderedGroup: any = this.getCircleGroupById(circleNumber);
+    const renderedGroup: any = this.getCircleGroupByNumber(circleNumber);
     if (!renderedGroup) {
       return;
     }
@@ -612,7 +573,7 @@ export class GameController {
       this.stop()
     }
 
-    for(const circle of allNonTouchedCircles) {
+    for (const circle of allNonTouchedCircles) {
       if (!circle.number) return;
 
       const poseLandmarks = results.poseLandmarks || [];
@@ -620,49 +581,49 @@ export class GameController {
       const lefttHandLandmarks = results.leftHandLandmarks || [];
       const isLastCircle = this.state.gameModel.circles.length === circle.number
 
-      if (isLastCircle) {
-        let didColideRightHand = false
-        let didColideLeftHand = false
+      // if (isLastCircle) {
+      //   let didColideRightHand = false
+      //   let didColideLeftHand = false
 
-        for (let posePoint of [...rightHandLandmarks]) {
-          const x = posePoint.x * window.innerWidth;
-          const y = posePoint.y * window.innerHeight;
-          if (circle.didColide(x, y, defaultPosePointRadius)) {
-            didColideRightHand = true
-            break
-          }
-        }
+      //   for (let posePoint of [...rightHandLandmarks]) {
+      //     const x = posePoint.x * window.innerWidth;
+      //     const y = posePoint.y * window.innerHeight;
+      //     if (circle.didColide(x, y, defaultPosePointRadius)) {
+      //       didColideRightHand = true
+      //       break
+      //     }
+      //   }
 
-        for (let posePoint of [...lefttHandLandmarks]) {
-          const x = posePoint.x * window.innerWidth;
-          const y = posePoint.y * window.innerHeight;
-          if (circle.didColide(x, y, defaultPosePointRadius)) {
-            didColideLeftHand = true
-            break
-          }
-        }
+      //   for (let posePoint of [...lefttHandLandmarks]) {
+      //     const x = posePoint.x * window.innerWidth;
+      //     const y = posePoint.y * window.innerHeight;
+      //     if (circle.didColide(x, y, defaultPosePointRadius)) {
+      //       didColideLeftHand = true
+      //       break
+      //     }
+      //   }
 
-        if (didColideLeftHand && didColideRightHand) {
+      //   if (didColideLeftHand && didColideRightHand) {
+      //     this.touchCircle(circle)
+      //     if (callBack) callBack();
+      //     return;
+      //   }
+
+      // } else {
+      for (let posePoint of [...poseLandmarks, ...rightHandLandmarks, ...lefttHandLandmarks]) {
+        const x = posePoint.x * window.innerWidth;
+        const y = posePoint.y * window.innerHeight;
+
+        if (circle.didColide(x, y, defaultPosePointRadius)) {
+
+
+
           this.touchCircle(circle)
           if (callBack) callBack();
           return;
         }
-
-      } else {
-        for (let posePoint of [...poseLandmarks, ...rightHandLandmarks, ...lefttHandLandmarks]) {
-          const x = posePoint.x * window.innerWidth;
-          const y = posePoint.y * window.innerHeight;
-
-          if (circle.didColide(x, y, defaultPosePointRadius)) {
-
-
-
-            this.touchCircle(circle)
-            if (callBack) callBack();
-            return;
-          }
-        }
       }
+      // }
     }
   }
 
@@ -724,7 +685,7 @@ export class GameController {
 
       const startCheckPoint = this.state.gameModel.startCheckpoint
 
-      if (event.params.active && !startCheckPoint.active){
+      if (event.params.active && !startCheckPoint.active) {
         startCheckPoint.setIsActive()
         this.resetGame()
       }
@@ -745,4 +706,24 @@ export class GameController {
     console.log("Circle removed", event)
     this.removeCircle(event.circleNumber)
   }
+
+  _onClickResizableGroup(group: any, onRemoveCallback: Function, onUpdate: Function) {
+    const isDecreaseKeyPressed = this.state.keyboard?.decreaseKeyIsPressed
+    const isRemoveKeyPressed = this.state.keyboard?.removeKeyIsPressed
+
+    if (isRemoveKeyPressed) {
+      onRemoveCallback()
+      return
+    }
+    const currentScaleX = group.getScaleX()
+    const currentScaleY = group.getScaleY()
+
+    group.scale({
+      x: isDecreaseKeyPressed ? currentScaleX - (currentScaleX * 0.1) : currentScaleX * 1.1,
+      y: isDecreaseKeyPressed ? currentScaleY - (currentScaleY * 0.1) : currentScaleY * 1.1,
+    })
+
+    onUpdate(group)
+  }
+
 }

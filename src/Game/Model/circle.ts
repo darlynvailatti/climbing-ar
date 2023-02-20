@@ -28,7 +28,7 @@ export class Circle {
   }
 
   didColide(x: number, y: number, radius: number) {
-    const circleRadius = this.renderizationMetadata.radius;
+    const circleRadius = this.renderizationMetadata.radius * Math.max(this.renderizationMetadata.scaleX || 1, this.renderizationMetadata.scaleY || 1);
     const circleX = this.renderizationMetadata.x;
     const circleY = this.renderizationMetadata.y;
     const d = Math.sqrt((circleX - x) ** 2 + (circleY - y) ** 2);
