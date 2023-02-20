@@ -104,23 +104,20 @@ function Backstage() {
 
     }
 
-    async function setupTrackingCamera() {
-        if (!webCamRef.current || !webCamRef.current.video) {
-            throw new Error("Video Input Camera is not setup")
-        }
-        await trackingEngineController.setupTrackingCamera(webCamRef.current.video)
-    }
-
-    const toggleTracking = () => {
+    const toggleTracking = async () => {
         if (appController.state.trackingEnabled) {
             console.log("Closing tracking...")
             trackingEngineController.closeTracking()
             appController.toggleCamera()
             appController.toggleTrackingLandmarks()
         } else {
+            if (!webCamRef.current || !webCamRef.current.video) {
+                throw new Error("Video Input Camera is not setup")
+            }
+
             console.log("Loading tracking...")
             trackingEngineController.loadTrackingEngine(onResults)
-            setupTrackingCamera()
+            await trackingEngineController.setupTrackingCamera(webCamRef.current.video)
         }
         appController.toggleTracking()
     }
@@ -201,7 +198,15 @@ function Backstage() {
                         style={{ display: "none" }}
                         onUserMediaError={(e) => {
                             console.error(`Error on loading camera: ${e}`)
+                        }}
+                        onUserMedia={(e) => {
+                            setTimeout(() => {
+                                if(webCamRef.current?.video){
+                                    webCamRef.current.video.srcObject = e
+                                }
+                            }, 2000)
                         }}>
+
                     </Webcam>
 
                     <canvas ref={trackingOutputCanvasRef}

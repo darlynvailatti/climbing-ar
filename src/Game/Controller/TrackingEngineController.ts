@@ -4,6 +4,7 @@ import { Holistic } from "@mediapipe/holistic";
 import { Pose } from "@mediapipe/pose";
 
 export interface TrackingEngineState {
+  camera?: Camera
   outputCanvas?: HTMLCanvasElement;
   trackingEngine?: Holistic;
 }
@@ -62,8 +63,9 @@ export class TrackingEngineController {
   }
 
   async setupTrackingCamera(inputVideo: HTMLVideoElement) {
-    console.debug("Loading Holistic Camera...");
-    const camera = new Camera(inputVideo, {
+    console.info("Loading Holistic Camera, input = ", inputVideo);
+    this.state.camera = new Camera(inputVideo, {
+      facingMode: 'environment',
       onFrame: async () => {
         if (!this.state.trackingEngine) {
           this.throwTrackingEngineNotLoaded();
@@ -72,7 +74,7 @@ export class TrackingEngineController {
         await this.state.trackingEngine.send({ image: inputVideo });
       },
     });
-    await camera.start();
+    await this.state.camera.start();
   }
 
   renderMarks(
